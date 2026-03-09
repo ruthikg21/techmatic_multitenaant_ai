@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login — Techmatic AI Platform</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    .login-page { animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+    .form-control.error { border-color: #e53e3e; }
+    #loginForm .btn-primary { width:100%; justify-content:center; padding:11px 18px; font-size:14px; margin-top:4px; }
+    .brand-strip {
+      display:flex;align-items:center;gap:6px;justify-content:center;
+      padding: 8px 0 4px;
+    }
+    .brand-strip span { font-size:12px;color:#9ba3ae; }
+    .brand-strip strong { color:#933a43; }
+  </style>
+</head>
+<body>
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic Systems" onerror="this.style.display='none'">
+      <h2>Admin Panel</h2>
+      <p>Sign in to manage the AI assistant</p>
+    </div>
+
+    <div id="loginAlert" style="display:none;"></div>
+
+    <form id="loginForm" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label" for="adminId">
+          <i class="fas fa-user" style="color:#933a43;margin-right:5px"></i>Admin ID
+        </label>
+        <input type="text" id="adminId" class="form-control" placeholder="Enter admin ID"
+          autocomplete="username" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom:24px;">
+        <label class="form-label" for="adminPassword">
+          <i class="fas fa-lock" style="color:#933a43;margin-right:5px"></i>Password
+        </label>
+        <div class="pw-wrap">
+          <input type="password" id="adminPassword" class="form-control" placeholder="Enter password"
+            autocomplete="current-password" required>
+          <button type="button" class="pw-toggle" id="pwToggle">
+            <i class="fas fa-eye" id="pwIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="loginBtn">
+        <i class="fas fa-sign-in-alt"></i>
+        <span id="loginBtnText">Sign In</span>
+      </button>
+    </form>
+
+    <div class="login-divider">Techmatic AI Platform</div>
+
+    <div class="brand-strip">
+      <span>Powered by <strong>Techmatic AI</strong></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // If already logged in, redirect based on role
+  if (localStorage.getItem('ts_admin_token')) {
+    var role = localStorage.getItem('ts_admin_role');
+    if (role === 'superadmin') {
+      window.location.href = '../superadmin/dashboard.html';
+    } else {
+      window.location.href = 'dashboard.html';
+    }
+  }
+
+  const API = window.TECHMATIC_ADMIN_API || 'http://localhost:8000';
+
+  document.getElementById('pwToggle').addEventListener('click', function() {
+    const pw = document.getElementById('adminPassword');
+    const icon = document.getElementById('pwIcon');
+    if (pw.type === 'password') {
+      pw.type = 'text';
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      pw.type = 'password';
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  });
+
+  function showAlert(msg, type='error') {
+    const el = document.getElementById('loginAlert');
+    el.style.display = 'flex';
+    el.className = `alert alert-${type}`;
+    el.innerHTML = `<i class="fas fa-${type==='error'?'times-circle':'check-circle'}"></i><span>${msg}</span>`;
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const adminId = document.getElementById('adminId').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    const btn = document.getElementById('loginBtn');
+    const btnText = document.getElementById('loginBtnText');
+
+    if (!adminId || !password) { showAlert('Please enter Admin ID and Password.'); return; }
+
+    btn.disabled = true;
+    btnText.textContent = 'Signing in...';
+    document.getElementById('adminId').classList.remove('error');
+    document.getElementById('adminPassword').classList.remove('error');
+
+    try {
+      const resp = await fetch(API + '/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_id: adminId, password }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.detail || 'Login failed');
+
+      localStorage.setItem('ts_admin_token', data.token);
+      localStorage.setItem('ts_admin_id', data.admin_id);
+      localStorage.setItem('ts_admin_role', data.role);
+      localStorage.setItem('ts_client_id', data.client_id || '');
+
+      showAlert('Login successful! Redirecting...', 'success');
+
+      // Route based on role
+      if (data.role === 'superadmin') {
+        setTimeout(() => window.location.href = '../superadmin/dashboard.html', 700);
+      } else {
+        setTimeout(() => window.location.href = 'dashboard.html', 700);
+      }
+    } catch(err) {
+      showAlert(err.message || 'Invalid credentials. Please try again.');
+      document.getElementById('adminId').classList.add('error');
+      document.getElementById('adminPassword').classList.add('error');
+      document.getElementById('adminPassword').value = '';
+    } finally {
+      btn.disabled = false;
+      btnText.textContent = 'Sign In';
+    }
+  });
+
+  document.getElementById('adminPassword').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('loginForm').requestSubmit();
+  });
+</script>
+</body>
+</html>

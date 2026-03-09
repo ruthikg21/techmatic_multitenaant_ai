@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Settings — Techmatic Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+  <div class="admin-layout">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div>
+          <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic"
+            onerror="this.style.display='none'" style="height:28px;margin-bottom:4px;">
+          <div class="logo-text">Techmatic Systems</div>
+          <div class="logo-tag">AI Admin Panel</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="dashboard.html" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+        <a href="leads.html" class="nav-item"><i class="fas fa-users"></i> Leads</a>
+        <a href="conversations.html" class="nav-item"><i class="fas fa-comments"></i> Conversations</a>
+        <div class="nav-section-label" style="margin-top:8px;">Configuration</div>
+        <a href="settings.html" class="nav-item active"><i class="fas fa-cog"></i> AI Settings</a>
+        <a href="knowledge.html" class="nav-item"><i class="fas fa-database"></i> Knowledge Base</a>
+        <div class="nav-section-label" style="margin-top:8px;">Account</div>
+        <a href="account.html" class="nav-item"><i class="fas fa-user-shield"></i> Account</a>
+        <a href="../index.html" class="nav-item" target="_blank"><i class="fas fa-external-link-alt"></i> View
+          Website</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-user-avatar"><i class="fas fa-user"></i></div>
+          <div>
+            <div class="sidebar-user-name" id="adminIdDisplay">Admin</div>
+            <div class="sidebar-user-role">Administrator</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">AI Settings</div>
+        <div class="topbar-actions">
+          <div class="status-badge"><span class="status-dot"></span> Platform Active</div>
+          <button class="topbar-btn danger" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+      </div>
+
+      <div class="page-body">
+        <div style="max-width:800px;">
+          <div id="alertArea"></div>
+
+
+          <!-- Assistant Behavior -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-robot"></i> Assistant Behavior</div>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label" for="assistantName">
+                  Assistant Name
+                  <span>Shown in the widget header</span>
+                </label>
+                <input type="text" id="assistantName" class="form-control" placeholder="Techmatic AI Assistant">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="greeting">
+                  Greeting Message
+                  <span>First message users see</span>
+                </label>
+                <textarea id="greeting" class="form-control" rows="2"
+                  placeholder="👋 Hello! I'm the Techmatic AI Assistant…"></textarea>
+              </div>
+
+              <div class="form-group mb-0">
+                <label class="form-label" for="systemPrompt">
+                  System Prompt
+                  <span>Full instructions for the AI assistant</span>
+                </label>
+                <textarea id="systemPrompt" class="form-control" rows="10"></textarea>
+                <div class="form-hint">This defines the AI's personality, knowledge, and behavior. Be specific and
+                  detailed.</div>
+              </div>
+
+              <div style="margin-top:20px;">
+                <button class="btn btn-primary" onclick="saveBehavior()">
+                  <i class="fas fa-save"></i> Save Behavior Settings
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lead Qualification -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-list-check"></i> Lead Qualification</div>
+            </div>
+            <div class="card-body">
+              <div
+                style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 14px;background:#f4f5f7;border-radius:8px;">
+                <label class="form-label mb-0" style="flex:1;font-size:14px;">
+                  <i class="fas fa-toggle-on" style="color:#933a43;margin-right:5px;"></i>
+                  Enable lead qualification questions
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                  <input type="checkbox" id="leadEnabled" style="width:16px;height:16px;accent-color:#933a43;">
+                  <span id="leadEnabledLabel" class="text-muted" style="font-size:13px;"></span>
+                </label>
+              </div>
+
+              <div class="form-group mb-0">
+                <label class="form-label" for="qualifyQ">
+                  Qualification Questions
+                  <span>One per line — asked naturally in conversation</span>
+                </label>
+                <textarea id="qualifyQ" class="form-control" rows="8" id="qualifyQ"></textarea>
+              </div>
+
+              <div style="margin-top:20px;">
+                <button class="btn btn-primary" onclick="saveQualification()">
+                  <i class="fas fa-save"></i> Save Qualification Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+  <script>
+    requireAuth();
+
+    function togglePw(inputId, btn) {
+      const inp = document.getElementById(inputId);
+      const icon = btn.querySelector('i');
+      if (inp.type === 'password') { inp.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+      else { inp.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+    }
+
+    function showAlert(msg, type = 'success') {
+      const el = document.getElementById('alertArea');
+      el.innerHTML = `<div class="alert alert-${type}"><i class="fas fa-${type === 'success' ? 'check-circle' : 'times-circle'}"></i><span>${msg}</span><button class="close-btn" onclick="this.parentElement.remove()">×</button></div>`;
+      if (type === 'success') setTimeout(() => el.innerHTML = '', 4000);
+    }
+
+    async function loadSettings() {
+      try {
+        const d = await apiFetch('/admin/settings');
+        // API Key elements removed from HTML, so we only load behavior/qualification
+        document.getElementById('systemPrompt').value = d.system_prompt || '';
+        document.getElementById('assistantName').value = d.assistant_name || '';
+        document.getElementById('greeting').value = d.greeting || '';
+        document.getElementById('leadEnabled').checked = d.lead_questions_enabled !== 0;
+        document.getElementById('qualifyQ').value = d.qualification_questions || '';
+        document.getElementById('leadEnabledLabel').textContent = d.lead_questions_enabled !== 0 ? 'Enabled' : 'Disabled';
+      } catch (e) { showAlert('Failed to load settings: ' + e.message, 'error'); }
+    }
+
+    document.getElementById('leadEnabled').addEventListener('change', function () {
+      document.getElementById('leadEnabledLabel').textContent = this.checked ? 'Enabled' : 'Disabled';
+    });
+
+    async function saveBehavior() {
+      try {
+        await apiFetch('/admin/settings', {
+          method: 'POST', body: JSON.stringify({
+            system_prompt: document.getElementById('systemPrompt').value,
+            assistant_name: document.getElementById('assistantName').value,
+            greeting: document.getElementById('greeting').value,
+          })
+        });
+        showAlert('Behavior settings saved!');
+      } catch (e) { showAlert(e.message, 'error'); }
+    }
+
+    async function saveQualification() {
+      try {
+        await apiFetch('/admin/settings', {
+          method: 'POST', body: JSON.stringify({
+            lead_questions_enabled: document.getElementById('leadEnabled').checked,
+            qualification_questions: document.getElementById('qualifyQ').value,
+          })
+        });
+        showAlert('Qualification settings saved!');
+      } catch (e) { showAlert(e.message, 'error'); }
+    }
+
+    loadSettings();
+  </script>
+</body>
+
+</html>

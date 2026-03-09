@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conversations — Techmatic Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo"><div>
+      <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic" onerror="this.style.display='none'" style="height:28px;margin-bottom:4px;">
+      <div class="logo-text">Techmatic Systems</div><div class="logo-tag">AI Admin Panel</div>
+    </div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a href="dashboard.html" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="leads.html" class="nav-item"><i class="fas fa-users"></i> Leads</a>
+      <a href="conversations.html" class="nav-item active"><i class="fas fa-comments"></i> Conversations</a>
+      <div class="nav-section-label" style="margin-top:8px;">Configuration</div>
+      <a href="settings.html" class="nav-item"><i class="fas fa-cog"></i> AI Settings</a>
+      <a href="knowledge.html" class="nav-item"><i class="fas fa-database"></i> Knowledge Base</a>
+      <div class="nav-section-label" style="margin-top:8px;">Account</div>
+      <a href="account.html" class="nav-item"><i class="fas fa-user-shield"></i> Account</a>
+      <a href="../index.html" class="nav-item" target="_blank"><i class="fas fa-external-link-alt"></i> View Website</a>
+    </nav>
+    <div class="sidebar-footer"><div class="sidebar-user">
+      <div class="sidebar-user-avatar"><i class="fas fa-user"></i></div>
+      <div><div class="sidebar-user-name" id="adminIdDisplay">Admin</div><div class="sidebar-user-role">Administrator</div></div>
+    </div></div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title">Conversations</div>
+      <div class="topbar-actions">
+        <div class="status-badge"><span class="status-dot"></span> Platform Active</div>
+        <button class="topbar-btn" onclick="loadSessions()"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="topbar-btn danger" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+    </div>
+
+    <div class="page-body" style="height:calc(100vh - 60px);overflow:hidden;padding:20px;">
+      <div class="split-layout">
+        <!-- Session list -->
+        <div class="split-left card" style="overflow:hidden;">
+          <div style="padding:12px 14px;border-bottom:1px solid #f0f0f0;flex-shrink:0;">
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input type="text" id="sessionSearch" placeholder="Search sessions…" oninput="filterSessions()">
+            </div>
+          </div>
+          <div class="session-list" id="sessionList">
+            <div style="padding:40px;text-align:center;">
+              <div class="loading-spinner" style="margin:auto;"></div>
+            </div>
+          </div>
+          <div style="padding:10px 14px;border-top:1px solid #f0f0f0;flex-shrink:0;">
+            <span id="sessionCount" class="text-muted" style="font-size:12px;"></span>
+          </div>
+        </div>
+
+        <!-- Message view -->
+        <div class="split-right card" style="overflow:hidden;">
+          <div id="convHeader" style="padding:14px 20px;border-bottom:1px solid #f0f0f0;flex-shrink:0;display:none;">
+            <div class="flex-between">
+              <div>
+                <div class="fw-600" style="font-size:14px;">Session</div>
+                <div id="convSessionId" class="text-muted" style="font-family:monospace;font-size:12px;"></div>
+              </div>
+              <div id="convMeta" class="text-muted" style="font-size:12px;text-align:right;"></div>
+            </div>
+          </div>
+          <div class="chat-messages" id="chatMessages" style="flex:1;overflow-y:auto;">
+            <div class="empty-state">
+              <i class="fas fa-comments"></i>
+              <p>Select a conversation to view messages</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="admin.js"></script>
+<script>
+  requireAuth();
+  let allSessions = [];
+  let activeSession = null;
+
+  // Handle URL param
+  const urlParams = new URLSearchParams(window.location.search);
+  const preloadSession = urlParams.get('session');
+
+  async function loadSessions() {
+    try {
+      const d = await apiFetch('/admin/conversations');
+      allSessions = d.sessions || [];
+      filterSessions();
+      if (preloadSession) {
+        openSession(preloadSession);
+      }
+    } catch(e) {
+      document.getElementById('sessionList').innerHTML =
+        `<div class="alert alert-error" style="margin:16px;"><i class="fas fa-times-circle"></i> ${esc(e.message)}</div>`;
+    }
+  }
+
+  function filterSessions() {
+    const q = (document.getElementById('sessionSearch').value||'').toLowerCase();
+    const filtered = allSessions.filter(s => !q || s.session_id.toLowerCase().includes(q) || (s.last_user_msg||'').toLowerCase().includes(q));
+    renderSessions(filtered);
+    document.getElementById('sessionCount').textContent = `${filtered.length} conversations`;
+  }
+
+  function renderSessions(sessions) {
+    const el = document.getElementById('sessionList');
+    if (!sessions.length) {
+      el.innerHTML = `<div class="empty-state" style="padding:40px;"><i class="fas fa-comment-slash"></i><p>${allSessions.length ? 'No matches.' : 'No conversations yet.'}</p></div>`;
+      return;
+    }
+    el.innerHTML = sessions.map(s => `
+      <div class="session-item ${activeSession===s.session_id?'active':''}" onclick="openSession('${esc(s.session_id)}')">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+          <div class="session-id">${esc(s.session_id?.slice(0,20))}…</div>
+          <span class="badge badge-new" style="font-size:10px;">${s.msg_count} msgs</span>
+        </div>
+        <div class="session-preview">${esc((s.last_user_msg||'—').slice(0,55))}</div>
+        <div class="session-meta">${fmtTimeAgo(s.last_msg)}</div>
+      </div>`).join('');
+  }
+
+  async function openSession(sessionId) {
+    activeSession = sessionId;
+    filterSessions();
+    document.getElementById('convHeader').style.display = 'block';
+    document.getElementById('convSessionId').textContent = sessionId;
+    const chatEl = document.getElementById('chatMessages');
+    chatEl.innerHTML = `<div style="text-align:center;padding:40px;"><div class="loading-spinner" style="margin:auto;"></div></div>`;
+
+    try {
+      const d = await apiFetch(`/admin/conversations/${encodeURIComponent(sessionId)}`);
+      const msgs = d.messages || [];
+      const session = allSessions.find(s=>s.session_id===sessionId);
+      if (session) {
+        document.getElementById('convMeta').innerHTML =
+          `${msgs.length} messages<br>${fmtTime(session.first_msg)}`;
+      }
+      if (!msgs.length) {
+        chatEl.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>No messages in this session.</p></div>`;
+        return;
+      }
+      chatEl.innerHTML = msgs.map(m => `
+        <div class="chat-msg ${m.role==='user'?'user':''}">
+          <div class="chat-avatar ${m.role==='user'?'user-avatar':'bot-avatar'}">
+            <i class="fas fa-${m.role==='user'?'user':'robot'}"></i>
+          </div>
+          <div>
+            <div class="chat-bubble ${m.role==='user'?'user-bubble':'bot-bubble'}">${esc(m.content)}</div>
+            <div class="chat-time ${m.role==='user'?'':''}">
+              ${m.role==='user'?'User':'Bot'} · ${fmtTime(m.timestamp)}
+            </div>
+          </div>
+        </div>`).join('');
+      chatEl.scrollTop = chatEl.scrollHeight;
+    } catch(e) {
+      chatEl.innerHTML = `<div class="alert alert-error" style="margin:20px;"><i class="fas fa-times-circle"></i> ${esc(e.message)}</div>`;
+    }
+  }
+
+  loadSessions();
+</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account — Techmatic Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo"><div>
+      <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic" onerror="this.style.display='none'" style="height:28px;margin-bottom:4px;">
+      <div class="logo-text">Techmatic Systems</div><div class="logo-tag">AI Admin Panel</div>
+    </div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a href="dashboard.html" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="leads.html" class="nav-item"><i class="fas fa-users"></i> Leads</a>
+      <a href="conversations.html" class="nav-item"><i class="fas fa-comments"></i> Conversations</a>
+      <div class="nav-section-label" style="margin-top:8px;">Configuration</div>
+      <a href="settings.html" class="nav-item"><i class="fas fa-cog"></i> AI Settings</a>
+      <a href="knowledge.html" class="nav-item"><i class="fas fa-database"></i> Knowledge Base</a>
+      <div class="nav-section-label" style="margin-top:8px;">Account</div>
+      <a href="account.html" class="nav-item active"><i class="fas fa-user-shield"></i> Account</a>
+      <a href="../index.html" class="nav-item" target="_blank"><i class="fas fa-external-link-alt"></i> View Website</a>
+    </nav>
+    <div class="sidebar-footer"><div class="sidebar-user">
+      <div class="sidebar-user-avatar"><i class="fas fa-user"></i></div>
+      <div><div class="sidebar-user-name" id="adminIdDisplay">Admin</div><div class="sidebar-user-role">Administrator</div></div>
+    </div></div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title">Account Settings</div>
+      <div class="topbar-actions">
+        <div class="status-badge"><span class="status-dot"></span> Platform Active</div>
+        <button class="topbar-btn danger" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div style="max-width:480px;">
+        <!-- Profile card -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-user-circle"></i> Admin Profile</div>
+          </div>
+          <div class="card-body">
+            <div style="display:flex;align-items:center;gap:16px;padding:8px 0;">
+              <div class="sidebar-user-avatar" style="width:52px;height:52px;font-size:22px;">
+                <i class="fas fa-user"></i>
+              </div>
+              <div>
+                <div class="fw-600" style="font-size:16px;" id="profileAdminId">admin</div>
+                <div class="text-muted">Administrator</div>
+                <div class="text-muted" style="font-size:12px;">Full access to AI platform</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Change password -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-lock"></i> Change Password</div>
+          </div>
+          <div class="card-body">
+            <div id="pwAlertArea"></div>
+
+            <div class="form-group">
+              <label class="form-label" for="currPw">Current Password</label>
+              <div class="pw-wrap">
+                <input type="password" id="currPw" class="form-control" placeholder="Enter current password">
+                <button type="button" class="pw-toggle" onclick="togglePw('currPw',this)"><i class="fas fa-eye"></i></button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="newPw">New Password</label>
+              <div class="pw-wrap">
+                <input type="password" id="newPw" class="form-control" placeholder="Enter new password">
+                <button type="button" class="pw-toggle" onclick="togglePw('newPw',this)"><i class="fas fa-eye"></i></button>
+              </div>
+            </div>
+
+            <div class="form-group mb-0">
+              <label class="form-label" for="confirmPw">Confirm New Password</label>
+              <div class="pw-wrap">
+                <input type="password" id="confirmPw" class="form-control" placeholder="Confirm new password">
+                <button type="button" class="pw-toggle" onclick="togglePw('confirmPw',this)"><i class="fas fa-eye"></i></button>
+              </div>
+            </div>
+
+            <div style="margin-top:24px;">
+              <button class="btn btn-primary" onclick="changePassword()" id="changePwBtn">
+                <i class="fas fa-save"></i> Update Password
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="card mt-4" style="border-color:rgba(229,62,62,0.3);">
+          <div class="card-header" style="background:rgba(229,62,62,0.04);">
+            <div class="card-title" style="color:#e53e3e;"><i class="fas fa-exclamation-triangle"></i> Session</div>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-3" style="font-size:13.5px;">Sign out of the admin panel on this device.</p>
+            <button class="btn btn-danger" onclick="adminLogout()">
+              <i class="fas fa-sign-out-alt"></i> Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="admin.js"></script>
+<script>
+  requireAuth();
+  document.getElementById('profileAdminId').textContent = getAdminId() || 'admin';
+
+  function togglePw(inputId, btn) {
+    const inp = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (inp.type==='password') { inp.type='text'; icon.classList.replace('fa-eye','fa-eye-slash'); }
+    else { inp.type='password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
+  }
+
+  function showPwAlert(msg, type='success') {
+    const el = document.getElementById('pwAlertArea');
+    el.innerHTML = `<div class="alert alert-${type}"><i class="fas fa-${type==='success'?'check-circle':'times-circle'}"></i><span>${msg}</span></div>`;
+    if (type==='success') setTimeout(()=>el.innerHTML='', 4000);
+  }
+
+  async function changePassword() {
+    const curr = document.getElementById('currPw').value;
+    const newPw = document.getElementById('newPw').value;
+    const confirm = document.getElementById('confirmPw').value;
+
+    if (!curr || !newPw || !confirm) { showPwAlert('All fields are required.','error'); return; }
+    if (newPw !== confirm) { showPwAlert('New passwords do not match.','error'); return; }
+    if (newPw.length < 6) { showPwAlert('Password must be at least 6 characters.','error'); return; }
+
+    const btn = document.getElementById('changePwBtn');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Updating…';
+    try {
+      await apiFetch('/admin/change-password', {
+        method:'POST',
+        body: JSON.stringify({current_password:curr, new_password:newPw})
+      });
+      showPwAlert('Password updated successfully!');
+      document.getElementById('currPw').value = '';
+      document.getElementById('newPw').value = '';
+      document.getElementById('confirmPw').value = '';
+    } catch(e) { showPwAlert(e.message,'error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i> Update Password'; }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Techmatic AI — Admin Panel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ================================================================
+   Design tokens — exactly matching the Techmatic website
+   Primary  : #dc3545
+   Secondary: #212529
+   Dark     : #2c3e50
+   Light bg : #f8f9fa
+   Text     : #333
+   Font     : Segoe UI, Tahoma, Geneva, Verdana, sans-serif
+================================================================ */
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --red:#dc3545;--dark:#212529;--deep:#2c3e50;
+  --bg:#f8f9fa;--white:#fff;--text:#333;
+  --border:#dee2e6;--muted:#6c757d;
+  --red-light:rgba(220,53,69,.09);
+  --grad:linear-gradient(135deg,#dc3545 0%,#212529 100%);
+  --shadow:0 4px 18px rgba(0,0,0,.10);
+  --radius:12px;
+}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── Login page ─────────────────────────────────────────────── */
+#login-page{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;
+  background:var(--grad);
+  position:relative;overflow:hidden;
+}
+#login-page::before{
+  content:'';position:absolute;top:-40%;right:-20%;
+  width:600px;height:600px;border-radius:50%;
+  background:rgba(255,255,255,.05);
+}
+#login-page::after{
+  content:'';position:absolute;bottom:-30%;left:-15%;
+  width:450px;height:450px;border-radius:50%;
+  background:rgba(255,255,255,.04);
+}
+.login-card{
+  background:#fff;border-radius:20px;padding:2.8rem 2.4rem;
+  width:min(420px,92vw);
+  box-shadow:0 30px 80px rgba(0,0,0,.30);
+  position:relative;z-index:1;
+  animation:fadeUp .5s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:2rem;}
+.login-logo img{height:34px;}
+.login-logo-text{font-size:1.35rem;font-weight:700;color:var(--dark);}
+.login-logo-text span{color:var(--red);}
+.login-card h2{font-size:1.55rem;font-weight:700;color:var(--deep);margin-bottom:.3rem;}
+.login-card p{color:var(--muted);font-size:.95rem;margin-bottom:1.8rem;}
+.field{margin-bottom:1.2rem;}
+.field label{display:block;font-size:.85rem;font-weight:600;color:var(--dark);margin-bottom:.45rem;}
+.field-wrap{position:relative;}
+.field-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem;}
+.field input{
+  width:100%;padding:.75rem 1rem .75rem 2.6rem;
+  border:1.5px solid var(--border);border-radius:10px;
+  font-size:.95rem;font-family:inherit;color:var(--text);
+  background:#fff;transition:border-color .2s;outline:none;
+}
+.field input:focus{border-color:var(--red);}
+.toggle-pw{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--muted);font-size:.85rem;
+  padding:2px 4px;
+}
+.btn-login{
+  width:100%;padding:.8rem;border:none;cursor:pointer;
+  background:var(--grad);color:#fff;border-radius:50px;
+  font-size:1rem;font-weight:600;font-family:inherit;
+  box-shadow:0 4px 18px rgba(220,53,69,.40);
+  transition:opacity .2s,transform .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-top:.5rem;
+}
+.btn-login:hover{opacity:.92;transform:translateY(-1px);}
+.btn-login:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+.login-err{
+  background:rgba(220,53,69,.1);border:1px solid rgba(220,53,69,.35);
+  color:var(--red);border-radius:8px;padding:.65rem 1rem;
+  font-size:.88rem;margin-bottom:1rem;display:none;
+}
+.login-err.show{display:block;}
+
+/* ── App shell ─────────────────────────────────────────────── */
+#app{display:none;height:100vh;overflow:hidden;flex-direction:column;}
+#app.show{display:flex;}
+
+/* top bar */
+#topbar{
+  background:#fff;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.5rem;height:60px;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  position:relative;z-index:10;
+}
+.tb-left{display:flex;align-items:center;gap:14px;}
+#menu-toggle{
+  display:none;background:none;border:none;
+  font-size:1.3rem;cursor:pointer;color:var(--dark);padding:4px 8px;
+  border-radius:6px;transition:background .2s;
+}
+#menu-toggle:hover{background:var(--bg);}
+.tb-logo{display:flex;align-items:center;gap:10px;}
+.tb-logo img{height:30px;}
+.tb-logo span{font-size:1rem;font-weight:700;color:var(--dark);}
+.tb-logo span b{color:var(--red);}
+.tb-right{display:flex;align-items:center;gap:.75rem;}
+#admin-label{font-size:.88rem;color:var(--muted);}
+#admin-label b{color:var(--dark);}
+.badge-pill{
+  background:var(--red-light);color:var(--red);
+  border:1px solid rgba(220,53,69,.3);
+  border-radius:50px;padding:3px 12px;font-size:.78rem;font-weight:600;
+}
+.btn-sm{
+  padding:.45rem 1rem;border-radius:50px;font-size:.82rem;
+  font-family:inherit;font-weight:600;cursor:pointer;border:none;
+  transition:all .2s;
+}
+.btn-outline{background:#fff;border:1.5px solid var(--border);color:var(--dark);}
+.btn-outline:hover{border-color:var(--red);color:var(--red);}
+.btn-red{background:var(--grad);color:#fff;box-shadow:0 3px 10px rgba(220,53,69,.35);}
+.btn-red:hover{opacity:.9;}
+.btn-danger{background:rgba(220,53,69,.1);color:var(--red);border:1px solid rgba(220,53,69,.3);}
+.btn-danger:hover{background:var(--red);color:#fff;}
+.btn-green{background:rgba(40,167,69,.1);color:#28a745;border:1px solid rgba(40,167,69,.3);}
+.btn-green:hover{background:#28a745;color:#fff;}
+
+/* layout */
+#layout{display:flex;flex:1;overflow:hidden;}
+#sidebar{
+  width:220px;flex-shrink:0;background:#fff;
+  border-right:1px solid var(--border);
+  overflow-y:auto;transition:margin .3s ease;
+}
+#sidebar.collapsed{margin-left:-220px;}
+.sidebar-nav{padding:1rem 0;}
+.nav-section{padding:.25rem 1rem;font-size:.7rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:.5rem;}
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:.65rem 1.2rem;cursor:pointer;
+  font-size:.91rem;font-weight:500;color:var(--text);
+  border-left:3px solid transparent;transition:all .2s;
+  text-decoration:none;
+}
+.nav-item:hover{background:var(--red-light);color:var(--red);}
+.nav-item.active{
+  background:var(--red-light);color:var(--red);
+  border-left-color:var(--red);font-weight:600;
+}
+.nav-item i{width:18px;text-align:center;font-size:.95rem;}
+
+/* main content */
+#main{flex:1;overflow-y:auto;background:var(--bg);}
+.panel{display:none;padding:1.8rem;}
+.panel.active{display:block;animation:fadeUp .25s ease;}
+
+/* cards */
+.card{
+  background:#fff;border-radius:var(--radius);
+  box-shadow:var(--shadow);border:1px solid #efefef;
+}
+.card-head{
+  padding:1rem 1.4rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-head h3{font-size:1rem;font-weight:700;color:var(--deep);}
+.card-body{padding:1.4rem;}
+
+/* stat cards */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:1rem;margin-bottom:1.5rem;}
+.stat-card{
+  background:#fff;border-radius:var(--radius);padding:1.2rem;
+  box-shadow:var(--shadow);border:1px solid #efefef;
+  display:flex;align-items:flex-start;gap:14px;
+}
+.stat-icon{
+  width:44px;height:44px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.15rem;flex-shrink:0;
+}
+.si-red{background:var(--red-light);color:var(--red);}
+.si-blue{background:rgba(13,110,253,.1);color:#0d6efd;}
+.si-green{background:rgba(40,167,69,.1);color:#28a745;}
+.si-amber{background:rgba(255,193,7,.15);color:#c99100;}
+.si-purple{background:rgba(111,66,193,.1);color:#6f42c1;}
+.stat-val{font-size:1.8rem;font-weight:800;color:var(--deep);line-height:1;}
+.stat-lbl{font-size:.78rem;color:var(--muted);margin-top:3px;}
+
+/* table */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.88rem;}
+thead th{
+  background:#f1f3f5;padding:.7rem 1rem;text-align:left;
+  font-size:.75rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--muted);white-space:nowrap;
+}
+tbody tr{border-bottom:1px solid #f1f3f5;transition:background .15s;}
+tbody tr:hover{background:#fafafa;}
+tbody td{padding:.75rem 1rem;vertical-align:middle;color:var(--text);}
+
+/* status badges */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:50px;font-size:.75rem;font-weight:600;
+  white-space:nowrap;
+}
+.b-new{background:rgba(13,110,253,.1);color:#0d6efd;}
+.b-contacted{background:rgba(40,167,69,.12);color:#28a745;}
+.b-qualified{background:rgba(111,66,193,.1);color:#6f42c1;}
+.b-closed{background:rgba(108,117,125,.12);color:#6c757d;}
+
+/* forms */
+.form-group{margin-bottom:1.2rem;}
+.form-group label{display:block;font-size:.85rem;font-weight:600;color:var(--dark);margin-bottom:.4rem;}
+.form-control{
+  width:100%;padding:.7rem 1rem;border:1.5px solid var(--border);border-radius:9px;
+  font-size:.93rem;font-family:inherit;color:var(--text);
+  background:#fff;outline:none;transition:border-color .2s;
+}
+.form-control:focus{border-color:var(--red);}
+.form-control:disabled{background:#f8f9fa;cursor:not-allowed;}
+textarea.form-control{resize:vertical;min-height:100px;}
+.form-hint{font-size:.78rem;color:var(--muted);margin-top:.3rem;}
+.input-group{position:relative;}
+.input-group .form-control{padding-right:80px;}
+.input-reveal{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;
+  font-family:inherit;font-weight:500;padding:4px 6px;
+}
+.has-key{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(40,167,69,.08);border:1px solid rgba(40,167,69,.3);
+  border-radius:8px;padding:.5rem .9rem;margin-bottom:.8rem;
+  font-size:.85rem;color:#28a745;
+}
+.has-key i{font-size:.9rem;}
+
+/* alert */
+.alert{
+  padding:.75rem 1rem;border-radius:9px;font-size:.88rem;
+  margin-bottom:.9rem;display:flex;align-items:flex-start;gap:8px;
+}
+.alert-success{background:rgba(40,167,69,.1);border:1px solid rgba(40,167,69,.3);color:#28a745;}
+.alert-danger {background:rgba(220,53,69,.1); border:1px solid rgba(220,53,69,.35);color:var(--red);}
+.alert-info   {background:rgba(13,110,253,.08);border:1px solid rgba(13,110,253,.25);color:#0d6efd;}
+.alert-dismiss{margin-left:auto;background:none;border:none;cursor:pointer;opacity:.6;font-size:1rem;}
+
+/* knowledge source rows */
+.kb-row{
+  display:flex;align-items:center;gap:10px;padding:.7rem 0;
+  border-bottom:1px solid #f1f3f5;
+}
+.kb-row:last-child{border-bottom:none;}
+.kb-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.kb-dot.scraped{background:#28a745;}
+.kb-dot.pending{background:#ffc107;}
+.kb-url{flex:1;min-width:0;font-size:.88rem;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.kb-title{font-size:.75rem;color:var(--muted);}
+.kb-del{background:none;border:none;color:#adb5bd;cursor:pointer;
+  font-size:.9rem;padding:3px 6px;border-radius:5px;transition:all .2s;}
+.kb-del:hover{background:rgba(220,53,69,.1);color:var(--red);}
+
+/* conversation drawer */
+#conv-drawer{
+  position:fixed;top:0;right:0;width:min(480px,98vw);height:100vh;
+  background:#fff;box-shadow:-8px 0 32px rgba(0,0,0,.14);
+  z-index:200;display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .3s ease;
+}
+#conv-drawer.open{transform:translateX(0);}
+.drawer-head{
+  background:var(--grad);padding:1rem 1.2rem;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.drawer-head h4{color:#fff;font-size:1rem;font-weight:700;}
+.drawer-head p{color:rgba(255,255,255,.78);font-size:.8rem;margin-top:2px;}
+.drawer-close{
+  background:rgba(255,255,255,.15);border:none;color:#fff;
+  width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1.1rem;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s;
+}
+.drawer-close:hover{background:rgba(255,255,255,.28);}
+.drawer-msgs{flex:1;overflow-y:auto;padding:1rem;background:#f8f9fa;display:flex;flex-direction:column;gap:6px;}
+.drawer-msgs::-webkit-scrollbar{width:4px;}
+.drawer-msgs::-webkit-scrollbar-thumb{background:#ced4da;border-radius:2px;}
+.conv-row{display:flex;align-items:flex-end;gap:8px;}
+.conv-row.u{justify-content:flex-end;}
+.conv-av{width:26px;height:26px;border-radius:50%;background:var(--grad);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.conv-av i{font-size:.6rem;color:#fff;}
+.conv-bbl{
+  max-width:78%;padding:8px 12px;font-size:.88rem;line-height:1.5;
+  word-break:break-word;white-space:pre-wrap;
+}
+.conv-row.b .conv-bbl{background:#fff;color:var(--text);
+  border-radius:4px 12px 12px 12px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.conv-row.u .conv-bbl{background:linear-gradient(135deg,#dc3545,#c82333);color:#fff;
+  border-radius:12px 12px 4px 12px;}
+.conv-t{font-size:.7rem;color:#adb5bd;margin-top:2px;display:block;}
+.conv-row.u .conv-t{text-align:right;}
+
+/* change password modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:300;display:none;align-items:center;justify-content:center;
+}
+.modal-overlay.show{display:flex;}
+.modal{background:#fff;border-radius:16px;padding:2rem;width:min(420px,92vw);
+  box-shadow:0 20px 60px rgba(0,0,0,.25);animation:fadeUp .3s ease;}
+.modal h3{font-size:1.2rem;font-weight:700;color:var(--deep);margin-bottom:1.2rem;}
+.modal-foot{display:flex;gap:.7rem;justify-content:flex-end;margin-top:1.2rem;}
+
+/* split layout for settings */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;}
+@media(max-width:860px){.two-col{grid-template-columns:1fr;}}
+
+/* loader */
+.spinner{
+  display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);
+  border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;
+}
+.spinner.dark{border-color:rgba(220,53,69,.2);border-top-color:var(--red);}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* mobile sidebar */
+@media(max-width:768px){
+  #menu-toggle{display:block;}
+  #sidebar{position:fixed;left:0;top:0;height:100%;z-index:100;
+    box-shadow:4px 0 20px rgba(0,0,0,.15);}
+  #sidebar.collapsed{margin-left:-220px;}
+  .panel{padding:1rem;}
+  #admin-label{display:none;}
+}
+/* empty state */
+.empty{text-align:center;padding:3rem 1rem;color:var(--muted);}
+.empty i{font-size:2.5rem;margin-bottom:.8rem;display:block;opacity:.3;}
+.empty p{font-size:.95rem;}
+/* truncate */
+.trunc{max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Conversations layout */
+.conv-layout{display:grid;grid-template-columns:280px 1fr;gap:1.2rem;height:calc(100vh - 230px);min-height:400px;}
+.conv-list-card{overflow:hidden;display:flex;flex-direction:column;}
+.conv-list-scroll{flex:1;overflow-y:auto;}
+.conv-list-scroll::-webkit-scrollbar{width:4px;}
+.conv-list-scroll::-webkit-scrollbar-thumb{background:#dee2e6;border-radius:2px;}
+.conv-item{
+  padding:.75rem 1rem;cursor:pointer;border-bottom:1px solid #f5f5f5;
+  border-left:3px solid transparent;transition:all .15s;
+}
+.conv-item:hover{background:#fafafa;}
+.conv-item.active{background:var(--red-light);border-left-color:var(--red);}
+.conv-preview{font-size:.8rem;color:var(--muted);margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.conv-meta{font-size:.7rem;color:#adb5bd;margin-top:2px;}
+.conv-detail-card{display:flex;flex-direction:column;overflow:hidden;}
+.conv-detail-msgs{flex:1;overflow-y:auto;padding:1rem;background:#f8f9fa;display:flex;flex-direction:column;gap:6px;}
+.conv-detail-msgs::-webkit-scrollbar{width:4px;}
+.conv-detail-msgs::-webkit-scrollbar-thumb{background:#ced4da;border-radius:2px;}
+@media(max-width:700px){.conv-layout{grid-template-columns:1fr;height:auto;}}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     LOGIN PAGE
+================================================================ -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic">
+      <span class="login-logo-text">Admin<span> Panel</span></span>
+    </div>
+    <h2>Welcome back</h2>
+    <p>Sign in to your admin dashboard</p>
+    <div class="login-err" id="login-err"><i class="fas fa-exclamation-circle"></i> <span id="login-err-msg"></span></div>
+    <div class="field">
+      <label>Admin ID</label>
+      <div class="field-wrap">
+        <i class="fas fa-user"></i>
+        <input type="text" id="login-id" placeholder="admin" autocomplete="username">
+      </div>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <div class="field-wrap">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password">
+        <button class="toggle-pw" onclick="togglePwVis('login-pw', this)">Show</button>
+      </div>
+    </div>
+    <button class="btn-login" id="login-btn" onclick="doLogin()">
+      <span id="login-btn-txt">Sign In</span>
+      <span id="login-spinner" class="spinner" style="display:none;"></span>
+    </button>
+    <p style="margin-top:1.2rem;font-size:.78rem;color:var(--muted);text-align:center;">
+      Default: <b>admin</b> / <b>admin123</b> — change after first login
+    </p>
+  </div>
+</div>
+
+<!-- ================================================================
+     APP
+================================================================ -->
+<div id="app">
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <div class="tb-left">
+      <button id="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="tb-logo">
+        <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic">
+        <span>Techmatic <b>AI Admin</b></span>
+      </div>
+    </div>
+    <div class="tb-right">
+      <span id="admin-label">Logged in as <b id="admin-name">admin</b></span>
+      <span class="badge-pill"><i class="fas fa-circle" style="font-size:.5rem;"></i> Active</span>
+      <button class="btn-sm btn-outline" onclick="openChgPw()"><i class="fas fa-key"></i> Password</button>
+      <button class="btn-sm btn-danger" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </div>
+
+  <div id="layout">
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div class="sidebar-nav">
+        <div class="nav-section">Main</div>
+        <a class="nav-item active" data-panel="dashboard" onclick="nav('dashboard')">
+          <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a class="nav-item" data-panel="leads" onclick="nav('leads')">
+          <i class="fas fa-users"></i> Leads
+        </a>
+        <a class="nav-item" data-panel="conversations" onclick="nav('conversations')">
+          <i class="fas fa-comments"></i> Conversations
+        </a>
+        <div class="nav-section">Configuration</div>
+        <a class="nav-item" data-panel="settings" onclick="nav('settings')">
+          <i class="fas fa-cog"></i> AI Settings
+        </a>
+        <a class="nav-item" data-panel="knowledge" onclick="nav('knowledge')">
+          <i class="fas fa-brain"></i> Knowledge Base
+        </a>
+        <div class="nav-section">Links</div>
+        <a class="nav-item" href="../index.html" target="_blank">
+          <i class="fas fa-external-link-alt"></i> View Website
+        </a>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div id="main">
+
+      <!-- DASHBOARD ──────────────────────────────────────────── -->
+      <div class="panel active" id="panel-dashboard">
+        <h2 style="font-size:1.4rem;font-weight:700;color:var(--deep);margin-bottom:1.2rem;">
+          <i class="fas fa-tachometer-alt" style="color:var(--red);margin-right:.4rem;"></i>Dashboard
+        </h2>
+        <div class="stats-row" id="stats-row">
+          <div class="stat-card"><div class="stat-icon si-red"><i class="fas fa-users"></i></div><div><div class="stat-val" id="s-leads">—</div><div class="stat-lbl">Total Leads</div></div></div>
+          <div class="stat-card"><div class="stat-icon si-blue"><i class="fas fa-user-plus"></i></div><div><div class="stat-val" id="s-new">—</div><div class="stat-lbl">New Leads</div></div></div>
+          <div class="stat-card"><div class="stat-icon si-green"><i class="fas fa-comments"></i></div><div><div class="stat-val" id="s-msgs">—</div><div class="stat-lbl">Total Messages</div></div></div>
+          <div class="stat-card"><div class="stat-icon si-amber"><i class="fas fa-calendar-day"></i></div><div><div class="stat-val" id="s-today">—</div><div class="stat-lbl">Messages Today</div></div></div>
+          <div class="stat-card"><div class="stat-icon si-purple"><i class="fas fa-layer-group"></i></div><div><div class="stat-val" id="s-sessions">—</div><div class="stat-lbl">Sessions</div></div></div>
+        </div>
+
+        <!-- recent leads -->
+        <div class="card">
+          <div class="card-head">
+            <h3><i class="fas fa-users" style="color:var(--red);margin-right:.4rem;"></i>Recent Leads</h3>
+            <button class="btn-sm btn-outline" onclick="nav('leads')">View All <i class="fas fa-arrow-right"></i></button>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr>
+                  <th>Name / Email</th><th>Company</th><th>Interest</th><th>Status</th><th>Date</th>
+                </tr></thead>
+                <tbody id="dash-leads-body">
+                  <tr><td colspan="5" class="empty"><i class="fas fa-inbox"></i><p>No leads yet.</p></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEADS ──────────────────────────────────────────────── -->
+      <div class="panel" id="panel-leads">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;">
+          <h2 style="font-size:1.4rem;font-weight:700;color:var(--deep);">
+            <i class="fas fa-users" style="color:var(--red);margin-right:.4rem;"></i>Leads
+          </h2>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <input id="lead-search" class="form-control" style="width:210px;padding:.45rem .9rem;font-size:.85rem;" placeholder="Search…" oninput="filterLeads()">
+            <select id="lead-filter" class="form-control" style="width:140px;padding:.45rem .7rem;font-size:.85rem;" onchange="filterLeads()">
+              <option value="">All Status</option>
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="qualified">Qualified</option>
+              <option value="closed">Closed</option>
+            </select>
+            <button class="btn-sm btn-red" onclick="loadLeads()"><i class="fas fa-sync-alt"></i></button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body" style="padding:0;">
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr>
+                  <th>Name</th><th>Email</th><th>Phone</th><th>Company</th>
+                  <th>Interest</th><th>Status</th><th>Date</th><th>Action</th>
+                </tr></thead>
+                <tbody id="leads-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONVERSATIONS ──────────────────────────────────────── -->
+      <div class="panel" id="panel-conversations">
+        <h2 style="font-size:1.4rem;font-weight:700;color:var(--deep);margin-bottom:1.2rem;">
+          <i class="fas fa-comments" style="color:var(--red);margin-right:.4rem;"></i>Conversations
+        </h2>
+        <div class="conv-layout">
+          <!-- session list -->
+          <div class="card conv-list-card">
+            <div class="card-head" style="flex-shrink:0;">
+              <h3>Sessions</h3>
+              <button class="btn-sm btn-red" onclick="loadConversations()"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div style="padding:.5rem .8rem;border-bottom:1px solid var(--border);flex-shrink:0;">
+              <input id="conv-search" class="form-control" style="padding:.4rem .8rem;font-size:.82rem;" placeholder="Search sessions…" oninput="filterConvs()">
+            </div>
+            <div class="conv-list-scroll" id="conv-list"></div>
+          </div>
+          <!-- message pane -->
+          <div class="card conv-detail-card">
+            <div class="card-head" style="flex-shrink:0;">
+              <div>
+                <h3 id="conv-detail-title">Select a conversation</h3>
+                <p id="conv-detail-sub" style="font-size:.78rem;color:var(--muted);margin-top:2px;font-family:monospace;"></p>
+              </div>
+            </div>
+            <div class="conv-detail-msgs" id="conv-detail-msgs">
+              <div class="empty"><i class="fas fa-comments"></i><p>Select a session on the left to view messages.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS ───────────────────────────────────────────── -->
+      <div class="panel" id="panel-settings">
+        <h2 style="font-size:1.4rem;font-weight:700;color:var(--deep);margin-bottom:1.2rem;">
+          <i class="fas fa-cog" style="color:var(--red);margin-right:.4rem;"></i>AI Settings
+        </h2>
+        <div id="settings-alert"></div>
+        <div class="two-col">
+          <!-- API config -->
+          <div class="card">
+            <div class="card-head"><h3><i class="fas fa-key" style="color:var(--red);margin-right:.4rem;"></i>Claude API</h3></div>
+            <div class="card-body">
+              <div id="api-key-status" style="display:none;" class="has-key">
+                <i class="fas fa-check-circle"></i><span>API key saved — <span id="key-masked"></span></span>
+              </div>
+              <div class="form-group">
+                <label>API Key <span style="color:var(--muted);font-weight:400;">(leave blank to keep existing)</span></label>
+                <div class="input-group">
+                  <input type="password" id="f-apikey" class="form-control" placeholder="sk-ant-api03-…">
+                  <button class="input-reveal" onclick="togglePwVis('f-apikey', this)">Show</button>
+                </div>
+                <div class="form-hint">Get your key from <a href="https://console.anthropic.com" target="_blank" style="color:var(--red);">console.anthropic.com</a></div>
+              </div>
+              <div class="form-group">
+                <label>Model</label>
+                <select id="f-model" class="form-control">
+                  <option value="claude-opus-4-5">Claude Opus 4 — Most capable</option>
+                  <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — Balanced</option>
+                  <option value="claude-haiku-4-5-20251001">Claude Haiku — Fast</option>
+                </select>
+              </div>
+              <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+                <button class="btn-sm btn-red" onclick="saveSettings()">
+                  <span id="save-lbl">Save Settings</span>
+                  <span id="save-spin" class="spinner" style="display:none;"></span>
+                </button>
+                <button class="btn-sm btn-green" onclick="testClaude()">
+                  <span id="test-lbl"><i class="fas fa-plug"></i> Test</span>
+                  <span id="test-spin" class="spinner dark" style="display:none;"></span>
+                </button>
+              </div>
+              <div id="test-result" style="margin-top:.8rem;display:none;"></div>
+            </div>
+          </div>
+          <!-- Widget config -->
+          <div class="card">
+            <div class="card-head"><h3><i class="fas fa-sliders-h" style="color:var(--red);margin-right:.4rem;"></i>Widget Config</h3></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Greeting Message</label>
+                <textarea id="f-greeting" class="form-control" rows="3" placeholder="Hello! 👋 I'm Techmatic's AI…"></textarea>
+              </div>
+              <button class="btn-sm btn-red" onclick="saveClient()">Save Widget Config</button>
+            </div>
+          </div>
+        </div>
+        <!-- System prompt & qualification -->
+        <div style="margin-top:1.2rem;" class="card">
+          <div class="card-head">
+            <h3><i class="fas fa-robot" style="color:var(--red);margin-right:.4rem;"></i>AI Behaviour</h3>
+          </div>
+          <div class="card-body two-col" style="gap:1.5rem;">
+            <div class="form-group" style="margin:0;">
+              <label>System Prompt</label>
+              <textarea id="f-prompt" class="form-control" rows="12" placeholder="You are an AI assistant for Techmatic Systems…"></textarea>
+              <div class="form-hint">Defines the AI's personality, knowledge, and constraints.</div>
+            </div>
+            <div>
+              <div class="form-group">
+                <label>Qualification Questions <small style="font-weight:400;color:var(--muted);">(one per line)</small></label>
+                <textarea id="f-qlist" class="form-control" rows="7" placeholder="What industry is your business in?"></textarea>
+              </div>
+              <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                  <input type="checkbox" id="f-leadon" style="accent-color:var(--red);width:16px;height:16px;">
+                  Enable lead qualification &amp; capture
+                </label>
+              </div>
+              <button class="btn-sm btn-red" onclick="saveSettings()">Save AI Behaviour</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KNOWLEDGE BASE ─────────────────────────────────────── -->
+      <div class="panel" id="panel-knowledge">
+        <h2 style="font-size:1.4rem;font-weight:700;color:var(--deep);margin-bottom:1.2rem;">
+          <i class="fas fa-brain" style="color:var(--red);margin-right:.4rem;"></i>Knowledge Base
+        </h2>
+        <div id="kb-alert"></div>
+        <div class="two-col">
+          <!-- add URL -->
+          <div class="card">
+            <div class="card-head"><h3><i class="fas fa-plus-circle" style="color:var(--red);margin-right:.4rem;"></i>Add Source URL</h3></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Page URL to scrape</label>
+                <input id="kb-url-input" class="form-control" type="url" placeholder="https://www.techmaticsys.com/services/">
+              </div>
+              <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+                <button class="btn-sm btn-red" onclick="addKBUrl()">
+                  <i class="fas fa-plus"></i> Add URL
+                </button>
+                <button class="btn-sm btn-green" id="scrape-all-btn" onclick="scrapeAll()">
+                  <i class="fas fa-spider"></i> <span id="scrape-all-lbl">Scrape All</span>
+                  <span id="scrape-all-spin" class="spinner" style="display:none;"></span>
+                </button>
+              </div>
+              <div class="form-hint" style="margin-top:.8rem;">
+                After adding URLs, click <b>Scrape All</b> to fetch content so the AI can use it when answering questions.
+              </div>
+            </div>
+          </div>
+          <!-- how it works -->
+          <div class="card">
+            <div class="card-head"><h3><i class="fas fa-info-circle" style="color:var(--red);margin-right:.4rem;"></i>How It Works</h3></div>
+            <div class="card-body" style="font-size:.88rem;color:var(--muted);line-height:1.7;">
+              <p>1. <b>Add URLs</b> — paste any page from your website or docs.</p>
+              <p style="margin-top:.5rem;">2. <b>Scrape All</b> — the backend fetches each page, strips HTML, and stores the clean text.</p>
+              <p style="margin-top:.5rem;">3. <b>AI uses the content</b> — every chat message injects the stored text into Claude's context so it can answer accurately.</p>
+              <p style="margin-top:.5rem;">4. <b>Re-scrape</b> any time to pick up updated content on your website.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Source list -->
+        <div class="card" style="margin-top:1.2rem;">
+          <div class="card-head">
+            <h3><i class="fas fa-list" style="color:var(--red);margin-right:.4rem;"></i>Knowledge Sources</h3>
+            <button class="btn-sm btn-outline" onclick="loadKB()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          </div>
+          <div class="card-body" id="kb-list-body">
+            <div class="empty"><i class="fas fa-database"></i><p>No sources added yet.</p></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- #main -->
+  </div><!-- #layout -->
+</div><!-- #app -->
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="chpw-modal">
+  <div class="modal">
+    <h3><i class="fas fa-key" style="color:var(--red);margin-right:.5rem;"></i>Change Password</h3>
+    <div id="chpw-alert"></div>
+    <div class="form-group">
+      <label>Current Password</label>
+      <div class="input-group">
+        <input type="password" id="cpw-old" class="form-control" placeholder="••••••••">
+        <button class="input-reveal" onclick="togglePwVis('cpw-old',this)">Show</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>New Password</label>
+      <div class="input-group">
+        <input type="password" id="cpw-new" class="form-control" placeholder="••••••••">
+        <button class="input-reveal" onclick="togglePwVis('cpw-new',this)">Show</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Confirm New Password</label>
+      <input type="password" id="cpw-conf" class="form-control" placeholder="••••••••">
+    </div>
+    <div class="modal-foot">
+      <button class="btn-sm btn-outline" onclick="closeChgPw()">Cancel</button>
+      <button class="btn-sm btn-red" onclick="submitChgPw()">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Conversation Drawer (mobile/fallback) -->
+<div id="conv-drawer">
+  <div class="drawer-head">
+    <div><h4 id="drawer-title">Conversation</h4><p id="drawer-sub"></p></div>
+    <button class="drawer-close" onclick="closeDrawer()">&times;</button>
+  </div>
+  <div class="drawer-msgs" id="drawer-msgs"></div>
+</div>
+
+<script>
+/* ================================================================
+   CONFIG
+================================================================ */
+const API = 'http://localhost:8000';
+let TOKEN = '';
+let ADMIN_ID = '';
+// sessions data
+let ALL_LEADS = [];
+let ALL_MSGS  = [];
+let ALL_SESSIONS = {};   // session_id -> [{role,content,ts}]
+let SEL_SESSION = '';
+
+/* ================================================================
+   HELPERS
+================================================================ */
+function $id(id){ return document.getElementById(id); }
+
+function apiReq(method, path, body=null){
+  const opts = {
+    method,
+    headers: {
+      'Content-Type':'application/json',
+      ...(TOKEN ? {'Authorization': 'Bearer '+TOKEN} : {})
+    }
+  };
+  if(body) opts.body = JSON.stringify(body);
+  return fetch(API+path, opts).then(r=>{
+    if(!r.ok) return r.json().then(e=>{ throw new Error(e.detail||r.statusText); });
+    return r.json();
+  });
+}
+
+function showAlert(containerId, type, msg, dismiss=true){
+  const icons = {success:'check-circle', danger:'exclamation-circle', info:'info-circle'};
+  $id(containerId).innerHTML = `
+    <div class="alert alert-${type}">
+      <i class="fas fa-${icons[type]||'info-circle'}"></i>
+      <span>${msg}</span>
+      ${dismiss?'<button class="alert-dismiss" onclick="this.parentElement.remove()">&times;</button>':''}
+    </div>`;
+}
+
+function clearAlert(id){ $id(id).innerHTML=''; }
+
+function fmtDate(ts){
+  if(!ts) return '—';
+  try{
+    const d = new Date(ts);
+    return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) +
+           ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  }catch{ return ts; }
+}
+
+function fmtTime(ts){
+  if(!ts) return '';
+  try{
+    const d = new Date(ts);
+    return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  }catch{ return ''; }
+}
+
+function badgeHtml(status){
+  const cls = {new:'b-new',contacted:'b-contacted',qualified:'b-qualified',closed:'b-closed'};
+  return `<span class="badge ${cls[status]||'b-new'}">${status||'new'}</span>`;
+}
+
+function togglePwVis(inputId, btn){
+  const inp = $id(inputId);
+  inp.type = inp.type==='password' ? 'text' : 'password';
+  btn.textContent = inp.type==='password' ? 'Show' : 'Hide';
+}
+
+/* ================================================================
+   LOGIN
+================================================================ */
+async function doLogin(){
+  const id  = $id('login-id').value.trim();
+  const pw  = $id('login-pw').value;
+  const err = $id('login-err');
+  const btn = $id('login-btn');
+  if(!id||!pw){ showLoginErr('Please enter Admin ID and Password.'); return; }
+
+  btn.disabled=true;
+  $id('login-btn-txt').textContent='Signing in…';
+  $id('login-spinner').style.display='inline-block';
+  clearLoginErr();
+
+  try{
+    const data = await apiReq('POST','/auth/login',{admin_id:id,password:pw});
+    TOKEN    = data.token;
+    ADMIN_ID = data.admin_id;
+    $id('admin-name').textContent = ADMIN_ID;
+    $id('login-page').style.display='none';
+    $id('app').classList.add('show');
+    bootApp();
+  }catch(e){
+    showLoginErr(e.message||'Login failed.');
+  }finally{
+    btn.disabled=false;
+    $id('login-btn-txt').textContent='Sign In';
+    $id('login-spinner').style.display='none';
+  }
+}
+
+function showLoginErr(msg){ $id('login-err').classList.add('show'); $id('login-err-msg').textContent=msg; }
+function clearLoginErr(){ $id('login-err').classList.remove('show'); }
+
+$id('login-pw').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+$id('login-id').addEventListener('keydown', e=>{ if(e.key==='Enter') $id('login-pw').focus(); });
+
+async function doLogout(){
+  try{ await apiReq('POST','/auth/logout'); }catch{}
+  TOKEN=''; ADMIN_ID='';
+  $id('app').classList.remove('show');
+  $id('login-page').style.display='flex';
+  $id('login-id').value='';
+  $id('login-pw').value='';
+}
+
+/* ================================================================
+   NAVIGATION
+================================================================ */
+function nav(panelName){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  $id('panel-'+panelName).classList.add('active');
+  document.querySelectorAll('.nav-item[data-panel="'+panelName+'"]').forEach(n=>n.classList.add('active'));
+  // lazy load
+  if(panelName==='dashboard')     loadDashboard();
+  if(panelName==='leads')         loadLeads();
+  if(panelName==='conversations') loadConversations();
+  if(panelName==='settings')      loadSettings();
+  if(panelName==='knowledge')     loadKB();
+  // close sidebar on mobile
+  if(window.innerWidth<=768) $id('sidebar').classList.add('collapsed');
+}
+
+function toggleSidebar(){
+  $id('sidebar').classList.toggle('collapsed');
+}
+
+function bootApp(){
+  loadDashboard();
+  loadSettings();
+}
+
+/* ================================================================
+   DASHBOARD
+================================================================ */
+async function loadDashboard(){
+  try{
+    const s = await apiReq('GET','/admin/stats?cid=1');
+    $id('s-leads').textContent    = s.total_leads;
+    $id('s-new').textContent      = s.new_leads;
+    $id('s-msgs').textContent     = s.total_messages;
+    $id('s-today').textContent    = s.today_messages;
+    $id('s-sessions').textContent = s.sessions;
+  }catch{}
+
+  try{
+    const d = await apiReq('GET','/admin/leads?cid=1');
+    ALL_LEADS = d.leads||[];
+    renderDashLeads(ALL_LEADS.slice(0,5));
+  }catch{}
+}
+
+function renderDashLeads(leads){
+  const tb = $id('dash-leads-body');
+  if(!leads.length){
+    tb.innerHTML='<tr><td colspan="5" class="empty"><i class="fas fa-inbox"></i><p>No leads yet. Start chatting to generate leads.</p></td></tr>';
+    return;
+  }
+  tb.innerHTML = leads.map(l=>`
+    <tr>
+      <td><div style="font-weight:600;font-size:.88rem;">${l.name||'—'}</div>
+          <div style="font-size:.75rem;color:var(--muted);">${l.email||'—'}</div></td>
+      <td class="trunc" style="font-size:.85rem;">${l.company||'—'}</td>
+      <td class="trunc" style="font-size:.85rem;">${l.interest||'—'}</td>
+      <td>${badgeHtml(l.status)}</td>
+      <td style="font-size:.78rem;color:var(--muted);">${fmtDate(l.created).split(' ')[0]||'—'}</td>
+    </tr>`).join('');
+}
+
+/* ================================================================
+   LEADS
+================================================================ */
+async function loadLeads(){
+  try{
+    const d = await apiReq('GET','/admin/leads?cid=1');
+    ALL_LEADS = d.leads||[];
+    renderLeads(ALL_LEADS);
+  }catch(e){ showAlert('', 'danger', e.message); }
+}
+
+function filterLeads(){
+  const q  = $id('lead-search').value.toLowerCase();
+  const st = $id('lead-filter').value;
+  const filtered = ALL_LEADS.filter(l=>{
+    const match = !q || [l.name,l.email,l.company,l.interest,l.phone].some(v=>(v||'').toLowerCase().includes(q));
+    const sMatch = !st || l.status===st;
+    return match && sMatch;
+  });
+  renderLeads(filtered);
+}
+
+function renderLeads(leads){
+  const tb = $id('leads-body');
+  if(!leads.length){
+    tb.innerHTML='<tr><td colspan="8" class="empty"><i class="fas fa-users"></i><p>No leads found.</p></td></tr>';
+    return;
+  }
+  tb.innerHTML = leads.map(l=>`
+    <tr>
+      <td style="font-weight:600;font-size:.88rem;">${l.name||'—'}</td>
+      <td style="font-size:.85rem;">${l.email||'—'}</td>
+      <td style="font-size:.85rem;">${l.phone||'—'}</td>
+      <td style="font-size:.85rem;" class="trunc">${l.company||'—'}</td>
+      <td style="font-size:.85rem;" class="trunc">${l.interest||'—'}</td>
+      <td>
+        <select class="form-control" style="padding:.3rem .5rem;font-size:.78rem;width:110px;"
+          onchange="changeLeadStatus(${l.id}, this.value)">
+          ${['new','contacted','qualified','closed'].map(s=>`<option value="${s}" ${l.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td style="font-size:.78rem;color:var(--muted);">${fmtDate(l.created)}</td>
+      <td>
+        <button class="btn-sm btn-outline" style="padding:.3rem .7rem;font-size:.78rem;"
+          onclick="viewLeadConv('${l.session}')">
+          <i class="fas fa-eye"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+async function changeLeadStatus(lid, status){
+  try{
+    await apiReq('PATCH',`/admin/leads/${lid}`,{status});
+    ALL_LEADS = ALL_LEADS.map(l=>l.id===lid?{...l,status}:l);
+  }catch(e){ alert('Failed: '+e.message); }
+}
+
+async function viewLeadConv(session){
+  if(!session) return;
+  nav('conversations');
+  await loadConversations();
+  selectSession(session);
+}
+
+/* ================================================================
+   CONVERSATIONS
+================================================================ */
+async function loadConversations(){
+  try{
+    const d = await apiReq('GET','/admin/conversations?cid=1&limit=400');
+    ALL_MSGS = d.messages||[];
+    // group by session
+    ALL_SESSIONS = {};
+    ALL_MSGS.forEach(m=>{
+      if(!ALL_SESSIONS[m.session]) ALL_SESSIONS[m.session]=[];
+      ALL_SESSIONS[m.session].unshift(m); // oldest first (API returns DESC)
+    });
+    renderConvList();
+  }catch{}
+}
+
+function renderConvList(){
+  const q   = ($id('conv-search').value||'').toLowerCase();
+  const ids = Object.keys(ALL_SESSIONS).sort((a,b)=>{
+    const la = ALL_SESSIONS[a]; const lb = ALL_SESSIONS[b];
+    return (lb[lb.length-1]?.ts||'').localeCompare(la[la.length-1]?.ts||'');
+  });
+  const filtered = ids.filter(id=>{
+    if(!q) return true;
+    return id.toLowerCase().includes(q) ||
+      ALL_SESSIONS[id].some(m=>m.content.toLowerCase().includes(q));
+  });
+
+  const el = $id('conv-list');
+  if(!filtered.length){
+    el.innerHTML='<div class="empty"><i class="fas fa-comments"></i><p>No conversations yet.</p></div>';
+    return;
+  }
+  el.innerHTML = filtered.map(id=>{
+    const msgs = ALL_SESSIONS[id];
+    const last = msgs[msgs.length-1];
+    const isActive = SEL_SESSION===id;
+    return `<div class="conv-item${isActive?' active':''}" onclick="selectSession('${id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:.8rem;font-weight:600;color:var(--dark);font-family:monospace;">${id.slice(0,20)}…</span>
+        <span style="font-size:.7rem;color:var(--muted);">${msgs.length} msgs</span>
+      </div>
+      <div class="conv-preview">${(last?.content||'').slice(0,60)}</div>
+      <div class="conv-meta">${fmtDate(last?.ts||'')}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterConvs(){ renderConvList(); }
+
+function selectSession(id){
+  SEL_SESSION = id;
+  renderConvList(); // re-render to show active
+
+  const msgs = ALL_SESSIONS[id]||[];
+  $id('conv-detail-title').textContent = msgs.length + ' messages';
+  $id('conv-detail-sub').textContent   = id;
+
+  const pane = $id('conv-detail-msgs');
+  if(!msgs.length){
+    pane.innerHTML='<div class="empty"><p>No messages in this session.</p></div>';
+    return;
+  }
+  pane.innerHTML = msgs.map(m=>{
+    const isU = m.role==='user';
+    const av  = isU ? '' : '<div class="conv-av"><i class="fas fa-robot"></i></div>';
+    return `<div class="conv-row ${isU?'u':'b'}">
+      ${av}
+      <div class="tm-bw">
+        <div class="conv-bbl">${escHtml(m.content||'')}</div>
+        <span class="conv-t">${isU?'User':'Bot'} · ${fmtTime(m.ts)}</span>
+      </div>
+    </div>`;
+  }).join('');
+  pane.scrollTop = pane.scrollHeight;
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+/* ================================================================
+   SETTINGS
+================================================================ */
+async function loadSettings(){
+  try{
+    const [cfg, cl] = await Promise.all([
+      apiReq('GET','/admin/settings?cid=1'),
+      apiReq('GET','/admin/client?cid=1')
+    ]);
+    if(cfg.has_key){
+      $id('api-key-status').style.display='flex';
+      $id('key-masked').textContent = cfg.api_key_masked;
+    }
+    $id('f-model').value    = cfg.model||'claude-opus-4-5';
+    $id('f-prompt').value   = cfg.sys_prompt||'';
+    $id('f-qlist').value    = cfg.q_list||'';
+    $id('f-leadon').checked = cfg.lead_on !== 0;
+    $id('f-greeting').value = cl.greeting||'';
+  }catch{}
+}
+
+async function saveSettings(){
+  const lbl  = $id('save-lbl');
+  const spin = $id('save-spin');
+  lbl.textContent='Saving…'; spin.style.display='inline-block';
+  clearAlert('settings-alert');
+  try{
+    const payload = {
+      model:      $id('f-model').value,
+      sys_prompt: $id('f-prompt').value,
+      q_list:     $id('f-qlist').value,
+      lead_on:    $id('f-leadon').checked,
+    };
+    const key = $id('f-apikey').value.trim();
+    if(key) payload.api_key = key;
+    await apiReq('POST','/admin/settings?cid=1', payload);
+    if(key){ $id('api-key-status').style.display='flex'; $id('key-masked').textContent=key.slice(0,8)+'••••'+key.slice(-4); $id('f-apikey').value=''; }
+    showAlert('settings-alert','success','Settings saved successfully.');
+  }catch(e){ showAlert('settings-alert','danger',e.message); }
+  finally{ lbl.textContent='Save Settings'; spin.style.display='none'; }
+}
+
+async function saveClient(){
+  try{
+    await apiReq('PATCH','/admin/client?cid=1',{greeting: $id('f-greeting').value});
+    showAlert('settings-alert','success','Widget config saved.');
+  }catch(e){ showAlert('settings-alert','danger',e.message); }
+}
+
+async function testClaude(){
+  const lbl=$id('test-lbl'); const spin=$id('test-spin'); const res=$id('test-result');
+  lbl.innerHTML='Testing…'; spin.style.display='inline-block'; res.style.display='none';
+  try{
+    const d = await apiReq('POST','/admin/test-claude?cid=1');
+    res.className='alert alert-success'; res.style.display='flex';
+    res.innerHTML=`<i class="fas fa-check-circle"></i> Connected! Model: <b>${d.model}</b> — "${d.message}"`;
+  }catch(e){
+    res.className='alert alert-danger'; res.style.display='flex';
+    res.innerHTML=`<i class="fas fa-exclamation-circle"></i> ${e.message}`;
+  }
+  finally{ lbl.innerHTML='<i class="fas fa-plug"></i> Test'; spin.style.display='none'; }
+}
+
+/* ================================================================
+   KNOWLEDGE BASE
+================================================================ */
+async function loadKB(){
+  try{
+    const d = await apiReq('GET','/admin/knowledge?cid=1');
+    renderKB(d.sources||[]);
+  }catch{}
+}
+
+function renderKB(sources){
+  const el = $id('kb-list-body');
+  if(!sources.length){
+    el.innerHTML='<div class="empty"><i class="fas fa-database"></i><p>No knowledge sources added yet.</p></div>';
+    return;
+  }
+  el.innerHTML = sources.map(s=>`
+    <div class="kb-row">
+      <div class="kb-dot ${s.scraped?'scraped':'pending'}" title="${s.scraped?'Scraped: '+s.scraped:'Not yet scraped'}"></div>
+      <div style="flex:1;min-width:0;">
+        <div class="kb-url">${s.url}</div>
+        ${s.title?`<div class="kb-title">${s.title}</div>`:''}
+      </div>
+      <span style="font-size:.75rem;color:${s.scraped?'#28a745':'#ffc107'};font-weight:600;white-space:nowrap;">
+        ${s.scraped?'✓ Scraped':'Pending'}
+      </span>
+      <button class="btn-sm btn-green" style="padding:.25rem .7rem;font-size:.75rem;"
+        onclick="scrapeOne('${s.url}')"><i class="fas fa-sync-alt"></i></button>
+      <button class="kb-del" onclick="deleteKBItem(${s.id})" title="Remove">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>`).join('');
+}
+
+async function addKBUrl(){
+  const url = $id('kb-url-input').value.trim();
+  if(!url){ showAlert('kb-alert','danger','Please enter a URL.'); return; }
+  clearAlert('kb-alert');
+  try{
+    await apiReq('POST','/admin/knowledge',{url, client_id:1});
+    $id('kb-url-input').value='';
+    showAlert('kb-alert','success','URL added. Click "Scrape All" to fetch its content.');
+    loadKB();
+  }catch(e){ showAlert('kb-alert','danger',e.message); }
+}
+
+async function deleteKBItem(id){
+  if(!confirm('Remove this knowledge source?')) return;
+  try{
+    await apiReq('DELETE',`/admin/knowledge/${id}`);
+    loadKB();
+  }catch(e){ alert('Error: '+e.message); }
+}
+
+async function scrapeOne(url){
+  showAlert('kb-alert','info','Scraping "'+url+'" in background…');
+  try{
+    await apiReq('POST','/admin/scrape',{url, client_id:1});
+    setTimeout(loadKB, 2500);
+  }catch(e){ showAlert('kb-alert','danger',e.message); }
+}
+
+async function scrapeAll(){
+  const lbl=$id('scrape-all-lbl'); const spin=$id('scrape-all-spin'); const btn=$id('scrape-all-btn');
+  lbl.textContent='Scraping…'; spin.style.display='inline-block'; btn.disabled=true;
+  clearAlert('kb-alert');
+  try{
+    const d = await apiReq('POST','/admin/scrape-all?cid=1');
+    const ok  = (d.results||[]).filter(r=>r.status==='ok').length;
+    const tot = (d.results||[]).length;
+    showAlert('kb-alert','success',`Scraped ${ok}/${tot} sources successfully.`);
+    loadKB();
+  }catch(e){ showAlert('kb-alert','danger',e.message); }
+  finally{ lbl.textContent='Scrape All'; spin.style.display='none'; btn.disabled=false; }
+}
+
+/* ================================================================
+   CHANGE PASSWORD
+================================================================ */
+function openChgPw(){ $id('chpw-modal').classList.add('show'); }
+function closeChgPw(){ $id('chpw-modal').classList.remove('show'); clearAlert('chpw-alert'); }
+
+async function submitChgPw(){
+  const old  = $id('cpw-old').value;
+  const nw   = $id('cpw-new').value;
+  const conf = $id('cpw-conf').value;
+  clearAlert('chpw-alert');
+  if(!old||!nw){ showAlert('chpw-alert','danger','Please fill all fields.'); return; }
+  if(nw!==conf){ showAlert('chpw-alert','danger','Passwords do not match.'); return; }
+  if(nw.length<6){ showAlert('chpw-alert','danger','Password must be at least 6 characters.'); return; }
+  try{
+    await apiReq('POST','/auth/change-password',{old_password:old, new_password:nw});
+    showAlert('chpw-alert','success','Password updated successfully!');
+    setTimeout(closeChgPw, 1500);
+    ['cpw-old','cpw-new','cpw-conf'].forEach(id=>$id(id).value='');
+  }catch(e){ showAlert('chpw-alert','danger',e.message); }
+}
+
+// close modal on overlay click
+$id('chpw-modal').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeChgPw(); });
+
+/* ================================================================
+   DRAWER (mobile/extra)
+================================================================ */
+function closeDrawer(){ $id('conv-drawer').classList.remove('open'); }
+</script>
+</body>
+</html>

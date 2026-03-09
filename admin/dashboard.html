@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Techmatic Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div>
+        <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic"
+          onerror="this.style.display='none'" style="height:28px;margin-bottom:4px;">
+        <div class="logo-text">Techmatic Systems</div>
+        <div class="logo-tag">AI Admin Panel</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a href="dashboard.html" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="leads.html" class="nav-item"><i class="fas fa-users"></i> Leads</a>
+      <a href="conversations.html" class="nav-item"><i class="fas fa-comments"></i> Conversations</a>
+      <div class="nav-section-label" style="margin-top:8px;">Configuration</div>
+      <a href="settings.html" class="nav-item"><i class="fas fa-cog"></i> AI Settings</a>
+      <a href="knowledge.html" class="nav-item"><i class="fas fa-database"></i> Knowledge Base</a>
+      <div class="nav-section-label" style="margin-top:8px;">Account</div>
+      <a href="account.html" class="nav-item"><i class="fas fa-user-shield"></i> Account</a>
+      <a href="../index.html" class="nav-item" target="_blank"><i class="fas fa-external-link-alt"></i> View Website</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar"><i class="fas fa-user"></i></div>
+        <div>
+          <div class="sidebar-user-name" id="adminIdDisplay">Admin</div>
+          <div class="sidebar-user-role">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title">Dashboard</div>
+      <div class="topbar-actions">
+        <div class="status-badge"><span class="status-dot"></span> Platform Active</div>
+        <button class="topbar-btn" onclick="loadAll()"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="topbar-btn danger" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="loading-spinner" style="margin:auto;display:block;margin-top:12px;"></div></div>
+        <div class="stat-card"></div>
+        <div class="stat-card"></div>
+        <div class="stat-card"></div>
+        <div class="stat-card"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="mb-4">
+        <!-- Recent Leads -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-users"></i> Recent Leads</div>
+            <a href="leads.html" class="btn btn-ghost btn-sm">View All →</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Contact</th><th>Industry</th><th>Status</th><th>Time</th>
+              </tr></thead>
+              <tbody id="recentLeadsBody">
+                <tr><td colspan="4" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i> Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Conversations -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-comments"></i> Recent Conversations</div>
+            <a href="conversations.html" class="btn btn-ghost btn-sm">View All →</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Session</th><th>Messages</th><th>Last Active</th></tr></thead>
+              <tbody id="recentSessionsBody">
+                <tr><td colspan="3" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i> Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
+        <a href="settings.html" class="card" style="display:flex;align-items:center;gap:14px;padding:18px;text-decoration:none;transition:box-shadow 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 20px rgba(147,58,67,0.15)'" onmouseout="this.style.boxShadow=''">
+          <div class="stat-icon si-red" style="flex-shrink:0"><i class="fas fa-robot"></i></div>
+          <div><div class="fw-600" style="font-size:14px;">Configure AI</div><div class="text-muted">API key, model, prompt</div></div>
+        </a>
+        <a href="knowledge.html" class="card" style="display:flex;align-items:center;gap:14px;padding:18px;text-decoration:none;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(49,130,206,0.15)'" onmouseout="this.style.boxShadow=''">
+          <div class="stat-icon si-blue" style="flex-shrink:0"><i class="fas fa-database"></i></div>
+          <div><div class="fw-600" style="font-size:14px;">Knowledge Base</div><div class="text-muted">Manage & scrape URLs</div></div>
+        </a>
+        <a href="leads.html" class="card" style="display:flex;align-items:center;gap:14px;padding:18px;text-decoration:none;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(56,161,105,0.15)'" onmouseout="this.style.boxShadow=''">
+          <div class="stat-icon si-green" style="flex-shrink:0"><i class="fas fa-users"></i></div>
+          <div><div class="fw-600" style="font-size:14px;">Manage Leads</div><div class="text-muted">View qualified prospects</div></div>
+        </a>
+        <a href="account.html" class="card" style="display:flex;align-items:center;gap:14px;padding:18px;text-decoration:none;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(214,158,46,0.15)'" onmouseout="this.style.boxShadow=''">
+          <div class="stat-icon si-orange" style="flex-shrink:0"><i class="fas fa-key"></i></div>
+          <div><div class="fw-600" style="font-size:14px;">Account</div><div class="text-muted">Change password</div></div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="admin.js"></script>
+<script>
+  requireAuth();
+
+  async function loadAll() {
+    await Promise.all([loadStats(), loadLeads(), loadSessions()]);
+  }
+
+  async function loadStats() {
+    try {
+      const d = await apiFetch('/admin/stats');
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card">
+          <div class="flex-between mb-1">
+            <div class="stat-label"><i class="fas fa-users"></i> Total Leads</div>
+            <div class="stat-icon si-red"><i class="fas fa-users"></i></div>
+          </div>
+          <div class="stat-value">${d.total_leads}</div>
+          <div class="stat-sub">${d.new_leads} new</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex-between mb-1">
+            <div class="stat-label"><i class="fas fa-comments"></i> Messages</div>
+            <div class="stat-icon si-blue"><i class="fas fa-comments"></i></div>
+          </div>
+          <div class="stat-value">${d.total_messages}</div>
+          <div class="stat-sub">${d.messages_today} today</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex-between mb-1">
+            <div class="stat-label"><i class="fas fa-door-open"></i> Sessions</div>
+            <div class="stat-icon si-green"><i class="fas fa-door-open"></i></div>
+          </div>
+          <div class="stat-value">${d.sessions}</div>
+          <div class="stat-sub">Unique visitors</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex-between mb-1">
+            <div class="stat-label"><i class="fas fa-database"></i> Knowledge</div>
+            <div class="stat-icon si-orange"><i class="fas fa-database"></i></div>
+          </div>
+          <div class="stat-value">${d.kb_scraped}<span style="font-size:18px;color:#9ba3ae">/${d.kb_sources}</span></div>
+          <div class="stat-sub">Sources scraped</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex-between mb-1">
+            <div class="stat-label"><i class="fas fa-bell"></i> New Leads</div>
+            <div class="stat-icon si-red"><i class="fas fa-bell"></i></div>
+          </div>
+          <div class="stat-value">${d.new_leads}</div>
+          <div class="stat-sub">Awaiting follow-up</div>
+        </div>
+      `;
+    } catch(e) {
+      document.getElementById('statsGrid').innerHTML = `<div class="card" style="padding:20px;grid-column:1/-1;"><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Failed to load stats: ${esc(e.message)}</div></div>`;
+    }
+  }
+
+  async function loadLeads() {
+    try {
+      const d = await apiFetch('/admin/leads?limit=8');
+      const leads = d.leads || [];
+      const tbody = document.getElementById('recentLeadsBody');
+      if (!leads.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state" style="padding:30px;"><i class="fas fa-inbox" style="display:block;font-size:28px;margin-bottom:8px;opacity:0.2;"></i>No leads yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = leads.map(l => `
+        <tr>
+          <td>
+            <div class="fw-600" style="font-size:13px;">${esc(l.name||'—')}</div>
+            <div class="text-muted">${esc(l.email||l.session_id?.slice(0,14)+'…'||'—')}</div>
+          </td>
+          <td><span style="font-size:12.5px;">${esc(l.industry||'—')}</span></td>
+          <td>${statusBadge(l.status)}</td>
+          <td class="text-muted" style="font-size:12px;">${fmtTimeAgo(l.created_at)}</td>
+        </tr>`).join('');
+    } catch(e) {
+      document.getElementById('recentLeadsBody').innerHTML = `<tr><td colspan="4" class="text-muted" style="padding:16px;">Error loading leads.</td></tr>`;
+    }
+  }
+
+  async function loadSessions() {
+    try {
+      const d = await apiFetch('/admin/conversations');
+      const sessions = (d.sessions||[]).slice(0,8);
+      const tbody = document.getElementById('recentSessionsBody');
+      if (!sessions.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty-state" style="padding:30px;"><i class="fas fa-comment-slash" style="display:block;font-size:28px;margin-bottom:8px;opacity:0.2;"></i>No conversations yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = sessions.map(s => `
+        <tr>
+          <td><code style="font-size:11px;color:#6c757d;">${esc(s.session_id?.slice(0,18))}…</code></td>
+          <td>${s.msg_count}</td>
+          <td class="text-muted" style="font-size:12px;">${fmtTimeAgo(s.last_msg)}</td>
+        </tr>`).join('');
+    } catch {}
+  }
+
+  loadAll();
+</script>
+</body>
+</html>
