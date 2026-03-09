@@ -342,11 +342,11 @@ async def test_ai(request: Request):
         import anthropic
         client = anthropic.Anthropic(api_key=config['api_key'])
         resp = client.messages.create(
-            model=config.get('model_name') or 'claude-3-5-sonnet-20240620',
+            model='claude-3-haiku-20240307',
             max_tokens=50,
             messages=[{"role": "user", "content": "Reply with exactly: AI Connected!"}]
         )
-        return {"status": "success", "message": resp.content[0].text, "model": config.get('model_name')}
+        return {"status": "success", "message": resp.content[0].text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -474,14 +474,14 @@ async def test_client_ai(client_id: int, request: Request):
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=config['api_key'])
-        # Use existing model or default to sonnet
-        model = config.get('model_name') or 'claude-3-5-sonnet-20240620'
+        # Hardcoded to valid model, bypassing DB config
+        model = 'claude-3-haiku-20240307'
         resp = client.messages.create(
             model=model,
             max_tokens=50,
             messages=[{"role": "user", "content": "Reply with exactly: Techmatic AI Connected!"}]
         )
-        return {"status": "success", "message": resp.content[0].text, "model": model}
+        return {"status": "success", "message": resp.content[0].text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

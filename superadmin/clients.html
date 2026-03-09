@@ -507,7 +507,7 @@
       try {
         const d = await apiFetch(`/superadmin/clients/${clientId}/test-ai`, { method: 'POST' });
         resultEl.style.display = 'block';
-        resultEl.innerHTML = `<div class="alert alert-success" style="font-size:12px;padding:8px 12px;"><i class="fas fa-check-circle"></i> Connected! Model: ${esc(d.model)}</div>`;
+        resultEl.innerHTML = `<div class="alert alert-success" style="font-size:12px;padding:8px 12px;"><i class="fas fa-check-circle"></i> Connected!</div>`;
       } catch (e) {
         resultEl.style.display = 'block';
         resultEl.innerHTML = `<div class="alert alert-error" style="font-size:12px;padding:8px 12px;"><i class="fas fa-times-circle"></i> ${esc(e.message)}</div>`;
