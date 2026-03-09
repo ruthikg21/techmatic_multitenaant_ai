@@ -224,7 +224,7 @@ Conversation:
 
         client = anthropic.Anthropic(api_key=config['api_key'])
         resp = client.messages.create(
-            model='claude-4-6-haiku-20260307',
+            model='claude-3-haiku-20240307',
             max_tokens=300,
             messages=[{"role": "user", "content": extract_prompt}]
         )
