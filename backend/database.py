@@ -58,7 +58,7 @@ def init_db():
             id SERIAL PRIMARY KEY,
             client_id INTEGER NOT NULL,
             api_key TEXT,
-            model_name TEXT DEFAULT 'claude-4-6-sonnet-20260215',
+            model_name TEXT DEFAULT 'claude-3-5-sonnet-20240620',
             system_prompt TEXT,
             lead_questions_enabled INTEGER DEFAULT 1,
             qualification_questions TEXT,
@@ -159,7 +159,7 @@ Always be professional, helpful, and concise. Ask one qualification question at 
 
                 c.execute("""INSERT INTO ai_config (client_id, model_name, system_prompt, lead_questions_enabled, qualification_questions,
                             assistant_name, greeting, widget_color, updated_at) VALUES (%s,%s,%s,1,%s,%s,%s,%s,%s)""",
-                          (client_id, 'claude-4-6-sonnet-20260215', default_prompt, default_questions,
+                          (client_id, 'claude-3-5-sonnet-20240620', default_prompt, default_questions,
                            'Techmatic AI Assistant',
                            "👋 Hello! I'm the Techmatic AI Assistant. Ask me anything about our services, or let me help you find the right solution!",
                            '#933a43', now))
@@ -241,7 +241,7 @@ Your goals:
         c.execute("""INSERT INTO ai_config (client_id, model_name, system_prompt, lead_questions_enabled,
                     qualification_questions, assistant_name, greeting, widget_color, updated_at)
                     VALUES (%s,%s,%s,1,%s,%s,%s,%s,%s)""",
-                  (client_id, 'claude-4-6-sonnet-20260215', default_prompt, default_questions,
+                  (client_id, 'claude-3-5-sonnet-20240620', default_prompt, default_questions,
                    f'{client_name} AI',
                    f"👋 Hello! I'm the {client_name} AI Assistant. How can I help you today?",
                    '#933a43', now))
