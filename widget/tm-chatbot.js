@@ -66,18 +66,24 @@
     '}',
     '#tm-fab {',
     '  position: fixed; bottom: 20px; right: 20px;',
-    '  width: 58px; height: 58px; border-radius: 50%;',
-    '  background: linear-gradient(135deg, #dc3545 0%, #212529 100%);',
+    '  height: 58px; border-radius: 29px;',
+    '  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);',
     '  border: none; cursor: pointer; z-index: 99990;',
-    '  display: flex !important; align-items: center; justify-content: center;',
-    '  box-shadow: 0 6px 20px rgba(220,53,69,0.50), 0 2px 8px rgba(0,0,0,0.20);',
-    '  transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease;',
-    '  outline: none;',
+    '  display: flex !important; align-items: center; justify-content: space-between;',
+    '  padding: 0 8px 0 20px; gap: 12px;',
+    '  box-shadow: 0 6px 20px rgba(234,88,12,0.40), 0 2px 8px rgba(0,0,0,0.15);',
+    '  transition: all .25s cubic-bezier(.34,1.56,.64,1);',
+    '  outline: none; overflow: hidden;',
     '}',
-    '#tm-fab:hover { transform: scale(1.12); box-shadow: 0 10px 30px rgba(220,53,69,0.60), 0 4px 12px rgba(0,0,0,0.25); }',
-    '#tm-fab svg { width: 26px; height: 26px; fill: #fff; position: absolute; transition: transform .3s ease, opacity .25s ease; }',
+    '#tm-fab-text { color: #fff; font-size: 15px; font-weight: 600; white-space: nowrap; }',
+    '#tm-fab-icon { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex !important; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }',
+    '#tm-fab:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 10px 25px rgba(234,88,12,0.50), 0 4px 12px rgba(0,0,0,0.20); }',
+    '#tm-fab svg { width: 24px; height: 24px; fill: #fff; position: absolute; transition: transform .3s ease, opacity .25s ease; }',
     '#tm-fab .ic-chat  { opacity:1; transform:scale(1) rotate(0deg); }',
     '#tm-fab .ic-close { opacity:0; transform:scale(.6) rotate(-90deg); }',
+    '#tm-fab.open { width: 58px; padding: 0; justify-content: center; gap: 0; background: linear-gradient(135deg, #dc3545 0%, #212529 100%); box-shadow: 0 6px 20px rgba(220,53,69,0.50), 0 2px 8px rgba(0,0,0,0.20); }',
+    '#tm-fab.open #tm-fab-text { display: none; }',
+    '#tm-fab.open #tm-fab-icon { width: 58px; height: 58px; background: transparent; }',
     '#tm-fab.open .ic-chat  { opacity:0; transform:scale(.6) rotate(90deg); }',
     '#tm-fab.open .ic-close { opacity:1; transform:scale(1) rotate(0deg); }',
     '#tm-badge {',
@@ -168,6 +174,8 @@
     '#tm-send svg { width:16px; height:16px; fill:#fff; }',
     '#tm-pow { text-align: center; font-size: 10.5px; color: #adb5bd !important;',
     '  padding: 5px 0 9px !important; background: #fff; flex-shrink: 0; }',
+    '#tm-pow a { color: #adb5bd !important; text-decoration: none; }',
+    '#tm-pow a:hover { text-decoration: underline; }',
     '#tm-pow b { color: #dc3545 !important; }',
     '@media (max-width: 480px) {',
     '  #tm-win { bottom: 0; right: 0; width: 100vw; height: 92vh; border-radius: 18px 18px 0 0; }',
@@ -186,9 +194,12 @@
     el.id = 'tm-widget';
     el.innerHTML =
       '<button id="tm-fab" title="Chat with us">' +
+      '<span id="tm-fab-text">Hi there! Need help?</span>' +
+      '<div id="tm-fab-icon">' +
       '<svg class="ic-chat" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' +
       '<svg class="ic-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>' +
       '<span id="tm-badge">1</span>' +
+      '</div>' +
       '</button>' +
       '<div id="tm-win">' +
       '<div id="tm-head">' +
@@ -210,7 +221,7 @@
       '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>' +
       '</button>' +
       '</div>' +
-      '<div id="tm-pow">Powered by <b>Techmatic AI</b></div>' +
+      '<div id="tm-pow"><a href="https://techmaticsys.com" target="_blank" rel="noopener noreferrer">Powered by <b>Matic AI</b></a></div>' +
       '</div>';
     document.body.appendChild(el);
   }
