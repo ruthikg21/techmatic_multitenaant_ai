@@ -105,6 +105,20 @@ def init_db():
             FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
         )""")
 
+        # ── WhatsApp config (per client) ──────────────────────────────────────────
+        c.execute("""CREATE TABLE IF NOT EXISTS whatsapp_config (
+            id SERIAL PRIMARY KEY,
+            client_id INTEGER NOT NULL UNIQUE,
+            enabled INTEGER DEFAULT 0,
+            twilio_account_sid TEXT,
+            twilio_auth_token TEXT,
+            twilio_whatsapp_number TEXT,
+            webhook_secret TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+        )""")
+
         # ── Seed super admin ──────────────────────────────────────────────────────
         c.execute("SELECT id FROM admin_users WHERE admin_id=%s", ('superadmin',))
         if not c.fetchone():
@@ -516,3 +530,60 @@ def get_global_stats():
         }
     conn.close()
     return s
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WHATSAPP CONFIG (scoped by client_id)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def get_whatsapp_config(client_id):
+    conn = get_conn()
+    with get_db_cursor(conn) as c:
+        c.execute("SELECT * FROM whatsapp_config WHERE client_id=%s", (client_id,))
+        row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def save_whatsapp_config(client_id, **kwargs):
+    conn = get_conn()
+    now = datetime.utcnow().isoformat()
+    with get_db_cursor(conn) as c:
+        c.execute("SELECT id FROM whatsapp_config WHERE client_id=%s", (client_id,))
+        existing = c.fetchone()
+        if existing:
+            cols = ", ".join(f"{k}=%s" for k in kwargs)
+            c.execute(f"UPDATE whatsapp_config SET {cols}, updated_at=%s WHERE client_id=%s",
+                      list(kwargs.values()) + [now, client_id])
+        else:
+            kwargs['client_id'] = client_id
+            kwargs['created_at'] = now
+            kwargs['updated_at'] = now
+            cols = ", ".join(kwargs.keys())
+            ph = ", ".join("%s" for _ in kwargs)
+            c.execute(f"INSERT INTO whatsapp_config ({cols}) VALUES ({ph})", list(kwargs.values()))
+    conn.commit()
+    conn.close()
+
+def get_whatsapp_config_by_phone(phone_number):
+    """Look up WhatsApp config by Twilio WhatsApp number (for incoming webhook)."""
+    conn = get_conn()
+    with get_db_cursor(conn) as c:
+        c.execute("SELECT wc.*, c.is_active as client_active FROM whatsapp_config wc JOIN clients c ON c.id=wc.client_id WHERE wc.twilio_whatsapp_number=%s AND wc.enabled=1", (phone_number,))
+        row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_whatsapp_sessions(client_id):
+    """Get all WhatsApp sessions for a client."""
+    conn = get_conn()
+    with get_db_cursor(conn) as c:
+        c.execute("""
+            SELECT session_id, COUNT(*) as msg_count,
+                   MIN(timestamp) as first_msg, MAX(timestamp) as last_msg,
+                   MAX(CASE WHEN role='user' THEN content END) as last_user_msg
+            FROM messages WHERE client_id=%s AND source='whatsapp'
+            GROUP BY session_id ORDER BY last_msg DESC
+        """, (client_id,))
+        rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

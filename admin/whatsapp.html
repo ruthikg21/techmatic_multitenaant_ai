@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Integration — Techmatic Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    .wa-status { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:500; }
+    .wa-status.connected { background:rgba(56,161,105,0.1); border:1px solid rgba(56,161,105,0.25); color:#2f855a; }
+    .wa-status.disconnected { background:rgba(229,62,62,0.08); border:1px solid rgba(229,62,62,0.25); color:#e53e3e; }
+    .webhook-box { display:flex; align-items:center; gap:10px; padding:12px 14px; background:#f4f5f7; border-radius:8px; border:1px solid #e0e0e0; }
+    .webhook-box code { font-family:monospace; font-size:13px; color:var(--text); flex:1; word-break:break-all; }
+    .copy-btn { padding:5px 10px; border:1px solid var(--border); border-radius:6px; background:#fff; cursor:pointer; font-size:12px; color:var(--text-muted); transition:all 0.2s; }
+    .copy-btn:hover { border-color:var(--primary); color:var(--primary); }
+    .step-number { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:var(--primary); color:#fff; font-size:12px; font-weight:700; flex-shrink:0; }
+    .setup-step { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #f0f0f0; }
+    .setup-step:last-child { border-bottom:none; }
+    .setup-step-text { font-size:13px; color:var(--text); line-height:1.5; }
+    .setup-step-text strong { color:var(--text); }
+    .setup-step-text code { background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:12px; }
+    .tab-bar { display:flex; border-bottom:2px solid var(--border); margin-bottom:20px; }
+    .tab-btn { padding:10px 20px; font-size:13.5px; font-weight:600; color:var(--text-muted); border:none; background:none; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.2s; }
+    .tab-btn:hover { color:var(--text); }
+    .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+  </style>
+</head>
+
+<body>
+  <div class="admin-layout">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div>
+          <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic"
+            onerror="this.style.display='none'" style="height:28px;margin-bottom:4px;">
+          <div class="logo-text">Techmatic Systems</div>
+          <div class="logo-tag">AI Admin Panel</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="dashboard.html" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+        <a href="leads.html" class="nav-item"><i class="fas fa-users"></i> Leads</a>
+        <a href="conversations.html" class="nav-item"><i class="fas fa-comments"></i> Conversations</a>
+        <div class="nav-section-label" style="margin-top:8px;">Configuration</div>
+        <a href="settings.html" class="nav-item"><i class="fas fa-cog"></i> AI Settings</a>
+        <a href="knowledge.html" class="nav-item"><i class="fas fa-database"></i> Knowledge Base</a>
+        <a href="whatsapp.html" class="nav-item active"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+        <div class="nav-section-label" style="margin-top:8px;">Account</div>
+        <a href="account.html" class="nav-item"><i class="fas fa-user-shield"></i> Account</a>
+        <a href="../index.html" class="nav-item" target="_blank"><i class="fas fa-external-link-alt"></i> View Website</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-user-avatar"><i class="fas fa-user"></i></div>
+          <div>
+            <div class="sidebar-user-name" id="adminIdDisplay">Admin</div>
+            <div class="sidebar-user-role">Administrator</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title"><i class="fab fa-whatsapp" style="color:#25D366;margin-right:8px;"></i> WhatsApp Integration</div>
+        <div class="topbar-actions">
+          <div id="waStatusBadge" class="wa-status disconnected">
+            <i class="fas fa-circle" style="font-size:8px;"></i> <span id="waStatusText">Not Connected</span>
+          </div>
+          <button class="topbar-btn danger" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+      </div>
+
+      <div class="page-body">
+        <div style="max-width:900px;">
+          <div id="alertArea"></div>
+
+          <!-- Tabs -->
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('config')"><i class="fas fa-cog"></i> Configuration</button>
+            <button class="tab-btn" onclick="switchTab('chats')"><i class="fas fa-comments"></i> WhatsApp Chats</button>
+            <button class="tab-btn" onclick="switchTab('setup')"><i class="fas fa-book"></i> Setup Guide</button>
+          </div>
+
+          <!-- ═══ CONFIG TAB ═══ -->
+          <div id="tab-config" class="tab-content active">
+
+            <!-- Enable/Disable -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <div class="card-title"><i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp Bot</div>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                  <input type="checkbox" id="waEnabled" style="width:16px;height:16px;accent-color:#25D366;">
+                  <span id="waEnabledLabel" style="font-size:13px;font-weight:500;color:var(--text-muted);">Disabled</span>
+                </label>
+              </div>
+              <div class="card-body">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+                  When enabled, your AI assistant will respond to WhatsApp messages using the same behavior and knowledge base configured in AI Settings.
+                </p>
+              </div>
+            </div>
+
+            <!-- Twilio Credentials -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <div class="card-title"><i class="fas fa-key"></i> Twilio Credentials</div>
+              </div>
+              <div class="card-body">
+                <div class="form-group">
+                  <label class="form-label" for="twilioSid">
+                    Account SID
+                    <span>Found in your Twilio Console Dashboard</span>
+                  </label>
+                  <input type="text" id="twilioSid" class="form-control" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="twilioToken">
+                    Auth Token
+                    <span>Found in your Twilio Console Dashboard</span>
+                  </label>
+                  <div class="pw-wrap">
+                    <input type="password" id="twilioToken" class="form-control" placeholder="Enter new token or leave blank to keep existing">
+                    <button class="pw-toggle" type="button" onclick="togglePw('twilioToken', this)">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                  <div id="tokenStatus" style="margin-top:6px;font-size:12px;color:var(--text-muted);"></div>
+                </div>
+
+                <div class="form-group mb-0">
+                  <label class="form-label" for="twilioNumber">
+                    WhatsApp Number
+                    <span>Your Twilio WhatsApp-enabled number (e.g. +14155238886)</span>
+                  </label>
+                  <input type="text" id="twilioNumber" class="form-control" placeholder="+14155238886">
+                  <div class="form-hint">For Twilio Sandbox, use the sandbox number. For production, use your approved WhatsApp Business number.</div>
+                </div>
+
+                <div style="margin-top:20px;display:flex;gap:10px;">
+                  <button class="btn btn-primary" onclick="saveWhatsAppConfig()">
+                    <i class="fas fa-save"></i> Save Configuration
+                  </button>
+                  <button class="btn btn-outline" onclick="testConnection()">
+                    <i class="fas fa-plug"></i> Test Connection
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Webhook URL -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <div class="card-title"><i class="fas fa-link"></i> Webhook URL</div>
+              </div>
+              <div class="card-body">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+                  Copy this URL and paste it in your Twilio WhatsApp Sandbox or Sender configuration as the webhook for incoming messages.
+                </p>
+                <div class="webhook-box">
+                  <code id="webhookUrl">Loading...</code>
+                  <button class="copy-btn" onclick="copyWebhook()"><i class="fas fa-copy"></i> Copy</button>
+                </div>
+                <div class="form-hint" style="margin-top:8px;">
+                  Set this as the <strong>"WHEN A MESSAGE COMES IN"</strong> webhook URL in Twilio. Method: <strong>POST</strong>.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ CHATS TAB ═══ -->
+          <div id="tab-chats" class="tab-content">
+            <div class="card" style="height:calc(100vh - 220px);display:flex;flex-direction:column;overflow:hidden;">
+              <div class="card-header" style="flex-shrink:0;">
+                <div class="card-title"><i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp Conversations</div>
+                <button class="btn btn-ghost btn-sm" onclick="loadWaChats()"><i class="fas fa-sync-alt"></i> Refresh</button>
+              </div>
+              <div style="display:flex;flex:1;overflow:hidden;">
+                <!-- Session list -->
+                <div style="width:300px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
+                  <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;flex-shrink:0;">
+                    <div class="search-box">
+                      <i class="fas fa-search"></i>
+                      <input type="text" id="waSearch" placeholder="Search chats..." oninput="filterWaChats()">
+                    </div>
+                  </div>
+                  <div id="waSessionList" style="flex:1;overflow-y:auto;">
+                    <div class="empty-state" style="padding:40px;"><i class="fab fa-whatsapp"></i><p>No WhatsApp chats yet</p></div>
+                  </div>
+                </div>
+                <!-- Chat view -->
+                <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                  <div id="waChatHeader" style="padding:12px 16px;border-bottom:1px solid #f0f0f0;display:none;flex-shrink:0;">
+                    <div class="flex-between">
+                      <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;">
+                          <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <div>
+                          <div class="fw-600" style="font-size:14px;" id="waChatPhone">Phone</div>
+                          <div class="text-muted" style="font-size:11px;" id="waChatMeta"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="chat-messages" id="waChatMessages" style="flex:1;overflow-y:auto;">
+                    <div class="empty-state">
+                      <i class="fab fa-whatsapp" style="color:#25D366;"></i>
+                      <p>Select a chat to view messages</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ SETUP GUIDE TAB ═══ -->
+          <div id="tab-setup" class="tab-content">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><i class="fas fa-book"></i> Twilio WhatsApp Setup Guide</div>
+              </div>
+              <div class="card-body">
+                <div class="setup-step">
+                  <span class="step-number">1</span>
+                  <div class="setup-step-text">
+                    <strong>Create a Twilio Account</strong><br>
+                    Sign up at <a href="https://www.twilio.com" target="_blank" style="color:var(--primary);">twilio.com</a> and verify your account. Note your <strong>Account SID</strong> and <strong>Auth Token</strong> from the Console Dashboard.
+                  </div>
+                </div>
+                <div class="setup-step">
+                  <span class="step-number">2</span>
+                  <div class="setup-step-text">
+                    <strong>Activate WhatsApp Sandbox (for testing)</strong><br>
+                    Go to <strong>Messaging > Try it out > Send a WhatsApp message</strong> in Twilio Console. Follow the instructions to join the sandbox by sending the join code from your WhatsApp to the sandbox number.
+                  </div>
+                </div>
+                <div class="setup-step">
+                  <span class="step-number">3</span>
+                  <div class="setup-step-text">
+                    <strong>Configure the Webhook</strong><br>
+                    In the Twilio WhatsApp Sandbox settings, set the <strong>"WHEN A MESSAGE COMES IN"</strong> field to your webhook URL shown in the Configuration tab. Method should be <code>POST</code>.
+                  </div>
+                </div>
+                <div class="setup-step">
+                  <span class="step-number">4</span>
+                  <div class="setup-step-text">
+                    <strong>Enter Credentials Here</strong><br>
+                    Paste your <strong>Account SID</strong>, <strong>Auth Token</strong>, and the <strong>Twilio WhatsApp number</strong> (sandbox or production) in the Configuration tab. Enable the integration and save.
+                  </div>
+                </div>
+                <div class="setup-step">
+                  <span class="step-number">5</span>
+                  <div class="setup-step-text">
+                    <strong>Test the Connection</strong><br>
+                    Click <strong>"Test Connection"</strong> to verify your Twilio credentials. Then send a WhatsApp message to your Twilio number — the AI bot will reply using the same behavior configured in your AI Settings.
+                  </div>
+                </div>
+                <div class="setup-step">
+                  <span class="step-number">6</span>
+                  <div class="setup-step-text">
+                    <strong>Go to Production (optional)</strong><br>
+                    To use a dedicated WhatsApp Business number, apply for a Twilio WhatsApp Sender in the Twilio Console. Once approved, update the number here and set the webhook URL in the sender configuration.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+  <script>
+    requireAuth();
+
+    /* ── Tab switching ── */
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add('active');
+      if (tab === 'chats') loadWaChats();
+    }
+
+    /* ── Helpers ── */
+    function togglePw(inputId, btn) {
+      const inp = document.getElementById(inputId);
+      const icon = btn.querySelector('i');
+      if (inp.type === 'password') { inp.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+      else { inp.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+    }
+
+    function showAlert(msg, type = 'success') {
+      const el = document.getElementById('alertArea');
+      el.innerHTML = `<div class="alert alert-${type}"><i class="fas fa-${type === 'success' ? 'check-circle' : 'times-circle'}"></i><span>${msg}</span><button class="close-btn" onclick="this.parentElement.remove()">&times;</button></div>`;
+      if (type === 'success') setTimeout(() => el.innerHTML = '', 4000);
+    }
+
+    /* ── Load config ── */
+    async function loadConfig() {
+      try {
+        const d = await apiFetch('/admin/whatsapp');
+        document.getElementById('waEnabled').checked = d.enabled === 1;
+        document.getElementById('waEnabledLabel').textContent = d.enabled === 1 ? 'Enabled' : 'Disabled';
+        document.getElementById('twilioSid').value = d.twilio_account_sid || '';
+        document.getElementById('twilioNumber').value = d.twilio_whatsapp_number || '';
+        document.getElementById('webhookUrl').textContent = d.webhook_url || '';
+
+        if (d.has_token) {
+          document.getElementById('tokenStatus').innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i> Auth token is saved';
+          document.getElementById('twilioToken').placeholder = 'Leave blank to keep existing token';
+        }
+
+        // Update status badge
+        const badge = document.getElementById('waStatusBadge');
+        const statusText = document.getElementById('waStatusText');
+        if (d.enabled === 1 && d.twilio_account_sid && d.has_token) {
+          badge.className = 'wa-status connected';
+          statusText.textContent = 'Connected';
+        } else {
+          badge.className = 'wa-status disconnected';
+          statusText.textContent = 'Not Connected';
+        }
+      } catch (e) {
+        showAlert('Failed to load config: ' + e.message, 'error');
+      }
+    }
+
+    document.getElementById('waEnabled').addEventListener('change', function () {
+      document.getElementById('waEnabledLabel').textContent = this.checked ? 'Enabled' : 'Disabled';
+    });
+
+    /* ── Save config ── */
+    async function saveWhatsAppConfig() {
+      try {
+        const payload = {
+          enabled: document.getElementById('waEnabled').checked,
+          twilio_account_sid: document.getElementById('twilioSid').value,
+          twilio_whatsapp_number: document.getElementById('twilioNumber').value,
+        };
+        const token = document.getElementById('twilioToken').value;
+        if (token.trim()) payload.twilio_auth_token = token;
+
+        await apiFetch('/admin/whatsapp', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        showAlert('WhatsApp configuration saved!');
+        loadConfig();
+      } catch (e) {
+        showAlert(e.message, 'error');
+      }
+    }
+
+    /* ── Test connection ── */
+    async function testConnection() {
+      try {
+        const d = await apiFetch('/admin/whatsapp/test', { method: 'POST' });
+        showAlert(d.message);
+      } catch (e) {
+        showAlert(e.message, 'error');
+      }
+    }
+
+    /* ── Copy webhook ── */
+    function copyWebhook() {
+      const url = document.getElementById('webhookUrl').textContent;
+      navigator.clipboard.writeText(url).then(() => showAlert('Webhook URL copied!'));
+    }
+
+    /* ── WhatsApp Chats ── */
+    let waAllSessions = [];
+    let waActiveSession = null;
+
+    async function loadWaChats() {
+      try {
+        const d = await apiFetch('/admin/whatsapp/conversations');
+        waAllSessions = d.sessions || [];
+        filterWaChats();
+      } catch (e) {
+        document.getElementById('waSessionList').innerHTML =
+          `<div class="alert alert-error" style="margin:12px;">${esc(e.message)}</div>`;
+      }
+    }
+
+    function filterWaChats() {
+      const q = (document.getElementById('waSearch').value || '').toLowerCase();
+      const filtered = waAllSessions.filter(s =>
+        !q || s.session_id.toLowerCase().includes(q) || (s.last_user_msg || '').toLowerCase().includes(q)
+      );
+      renderWaSessions(filtered);
+    }
+
+    function renderWaSessions(sessions) {
+      const el = document.getElementById('waSessionList');
+      if (!sessions.length) {
+        el.innerHTML = '<div class="empty-state" style="padding:40px;"><i class="fab fa-whatsapp"></i><p>No WhatsApp chats yet</p></div>';
+        return;
+      }
+      el.innerHTML = sessions.map(s => {
+        const phone = s.session_id.replace('wa_', '');
+        return `
+        <div class="session-item ${waActiveSession === s.session_id ? 'active' : ''}"
+             onclick="openWaChat('${esc(s.session_id)}')" style="cursor:pointer;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+            <i class="fab fa-whatsapp" style="color:#25D366;font-size:14px;"></i>
+            <span style="font-size:13px;font-weight:500;">${esc(phone)}</span>
+            <span class="badge badge-new" style="font-size:10px;margin-left:auto;">${s.msg_count}</span>
+          </div>
+          <div class="session-preview">${esc((s.last_user_msg || '—').slice(0, 50))}</div>
+          <div class="session-meta">${fmtTimeAgo(s.last_msg)}</div>
+        </div>`;
+      }).join('');
+    }
+
+    async function openWaChat(sessionId) {
+      waActiveSession = sessionId;
+      filterWaChats();
+      const phone = sessionId.replace('wa_', '');
+      document.getElementById('waChatHeader').style.display = 'block';
+      document.getElementById('waChatPhone').textContent = phone;
+      const chatEl = document.getElementById('waChatMessages');
+      chatEl.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner" style="margin:auto;"></div></div>';
+
+      try {
+        const d = await apiFetch(`/admin/whatsapp/conversations/${encodeURIComponent(sessionId)}`);
+        const msgs = d.messages || [];
+        const session = waAllSessions.find(s => s.session_id === sessionId);
+        if (session) {
+          document.getElementById('waChatMeta').textContent = `${msgs.length} messages | ${fmtTime(session.first_msg)}`;
+        }
+        if (!msgs.length) {
+          chatEl.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No messages</p></div>';
+          return;
+        }
+        chatEl.innerHTML = msgs.map(m => `
+          <div class="chat-msg ${m.role === 'user' ? 'user' : ''}">
+            <div class="chat-avatar ${m.role === 'user' ? 'user-avatar' : 'bot-avatar'}" style="${m.role === 'user' ? '' : 'background:linear-gradient(135deg,#25D366,#128C7E);'}">
+              <i class="fas fa-${m.role === 'user' ? 'user' : 'robot'}"></i>
+            </div>
+            <div>
+              <div class="chat-bubble ${m.role === 'user' ? 'user-bubble' : 'bot-bubble'}">${esc(m.content)}</div>
+              <div class="chat-time">${m.role === 'user' ? 'Customer' : 'Bot'} | ${fmtTime(m.timestamp)}</div>
+            </div>
+          </div>`).join('');
+        chatEl.scrollTop = chatEl.scrollHeight;
+      } catch (e) {
+        chatEl.innerHTML = `<div class="alert alert-error" style="margin:16px;">${esc(e.message)}</div>`;
+      }
+    }
+
+    /* ── Init ── */
+    loadConfig();
+  </script>
+</body>
+
+</html>

@@ -19,7 +19,10 @@ from database import (
     # Client management
     create_client, create_client_admin, get_all_clients, get_client_by_id,
     get_client_by_api_key, get_client_admins, update_client,
-    toggle_client_active, regenerate_client_api_key
+    toggle_client_active, regenerate_client_api_key,
+    # WhatsApp
+    get_whatsapp_config, save_whatsapp_config, get_whatsapp_config_by_phone,
+    get_whatsapp_sessions
 )
 from ai_engine import handle_incoming_message
 from scraper import scrape_url
@@ -124,6 +127,12 @@ class UpdateClientReq(BaseModel):
     client_name: Optional[str] = None
     domain: Optional[str] = None
     is_active: Optional[bool] = None
+
+class WhatsAppConfigReq(BaseModel):
+    enabled: Optional[bool] = None
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_whatsapp_number: Optional[str] = None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -540,6 +549,139 @@ async def get_embed_code(client_id: int, request: Request):
 <script src="{base_url}/static/widget/tm-chatbot.js" defer></script>"""
 
     return {"embed_code": embed, "api_key": client["widget_api_key"]}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WHATSAPP — TWILIO WEBHOOK (public — receives incoming WhatsApp messages)
+# ══════════════════════════════════════════════════════════════════════════════
+
+from fastapi.responses import PlainTextResponse
+
+@app.post("/webhook/whatsapp")
+async def whatsapp_webhook(request: Request):
+    """
+    Twilio sends incoming WhatsApp messages here.
+    Matches the sender's Twilio number to a client, runs the AI, replies via Twilio.
+    """
+    form = await request.form()
+    from_number = form.get("From", "")        # e.g. whatsapp:+919876543210
+    to_number = form.get("To", "")            # e.g. whatsapp:+14155238886
+    body = form.get("Body", "").strip()
+    sender_name = form.get("ProfileName", "")
+
+    if not body or not to_number:
+        return PlainTextResponse("", status_code=200)
+
+    # Strip "whatsapp:" prefix for lookup
+    clean_to = to_number.replace("whatsapp:", "").strip()
+    wa_config = get_whatsapp_config_by_phone(clean_to)
+    if not wa_config or not wa_config.get("client_active"):
+        return PlainTextResponse("", status_code=200)
+
+    client_id = wa_config["client_id"]
+
+    # Use the sender phone as session_id for WhatsApp continuity
+    clean_from = from_number.replace("whatsapp:", "").strip()
+    session_id = f"wa_{clean_from}"
+
+    # Run through the same AI engine with source='whatsapp'
+    reply = await handle_incoming_message("whatsapp", body, session_id, client_id)
+
+    # Send reply back via Twilio
+    try:
+        from twilio.rest import Client as TwilioClient
+        twilio_client = TwilioClient(wa_config["twilio_account_sid"], wa_config["twilio_auth_token"])
+        twilio_client.messages.create(
+            body=reply,
+            from_=f"whatsapp:{wa_config['twilio_whatsapp_number']}",
+            to=from_number,
+        )
+    except Exception as e:
+        print(f"[WhatsApp] Failed to send reply: {e}")
+
+    return PlainTextResponse("", status_code=200)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ADMIN — WHATSAPP CONFIG (scoped to client)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/admin/whatsapp")
+async def get_wa_settings(request: Request):
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    config = get_whatsapp_config(cid) or {}
+    # Mask the auth token
+    if config.get("twilio_auth_token"):
+        t = config["twilio_auth_token"]
+        config["twilio_auth_token_masked"] = t[:4] + "••••••••" + t[-4:] if len(t) > 8 else "••••••••"
+        config["has_token"] = True
+    else:
+        config["twilio_auth_token_masked"] = ""
+        config["has_token"] = False
+    config.pop("twilio_auth_token", None)
+
+    # Build webhook URL for display
+    host = request.headers.get("host", "localhost:8000")
+    scheme = "https" if "https" in str(request.url) else "http"
+    config["webhook_url"] = f"{scheme}://{host}/webhook/whatsapp"
+
+    return config
+
+@app.post("/admin/whatsapp")
+async def post_wa_settings(req: WhatsAppConfigReq, request: Request):
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    updates = {}
+    if req.enabled is not None:
+        updates["enabled"] = 1 if req.enabled else 0
+    if req.twilio_account_sid is not None:
+        updates["twilio_account_sid"] = req.twilio_account_sid.strip()
+    if req.twilio_auth_token is not None and req.twilio_auth_token.strip():
+        updates["twilio_auth_token"] = req.twilio_auth_token.strip()
+    if req.twilio_whatsapp_number is not None:
+        updates["twilio_whatsapp_number"] = req.twilio_whatsapp_number.strip()
+    if updates:
+        save_whatsapp_config(cid, **updates)
+    return {"status": "ok"}
+
+@app.post("/admin/whatsapp/test")
+async def test_wa_connection(request: Request):
+    """Test Twilio credentials by fetching account info."""
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    config = get_whatsapp_config(cid)
+    if not config or not config.get("twilio_account_sid") or not config.get("twilio_auth_token"):
+        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
+    try:
+        from twilio.rest import Client as TwilioClient
+        tc = TwilioClient(config["twilio_account_sid"], config["twilio_auth_token"])
+        account = tc.api.accounts(config["twilio_account_sid"]).fetch()
+        return {"status": "success", "message": f"Connected! Account: {account.friendly_name}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Twilio connection failed: {str(e)}")
+
+@app.get("/admin/whatsapp/conversations")
+async def wa_conversations(request: Request):
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    return {"sessions": get_whatsapp_sessions(cid)}
+
+@app.get("/admin/whatsapp/conversations/{session_id}")
+async def wa_conversation(session_id: str, request: Request):
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    return {"messages": get_session_messages(session_id, 100, cid)}
 
 
 @app.get("/")
