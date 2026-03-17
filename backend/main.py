@@ -612,16 +612,22 @@ async def get_wa_settings(request: Request):
     cid = admin["client_id"]
     if not cid:
         raise HTTPException(status_code=400, detail="No client context")
-    config = get_whatsapp_config(cid) or {}
-    # Mask the auth token
-    if config.get("twilio_auth_token"):
-        t = config["twilio_auth_token"]
-        config["twilio_auth_token_masked"] = t[:4] + "••••••••" + t[-4:] if len(t) > 8 else "••••••••"
-        config["has_token"] = True
-    else:
-        config["twilio_auth_token_masked"] = ""
-        config["has_token"] = False
-    config.pop("twilio_auth_token", None)
+    raw = get_whatsapp_config(cid)
+    config = {
+        "enabled": 0,
+        "twilio_account_sid": "",
+        "twilio_whatsapp_number": "",
+        "has_token": False,
+        "twilio_auth_token_masked": "",
+    }
+    if raw:
+        config["enabled"] = raw.get("enabled", 0)
+        config["twilio_account_sid"] = raw.get("twilio_account_sid") or ""
+        config["twilio_whatsapp_number"] = raw.get("twilio_whatsapp_number") or ""
+        if raw.get("twilio_auth_token"):
+            t = raw["twilio_auth_token"]
+            config["twilio_auth_token_masked"] = t[:4] + "••••••••" + t[-4:] if len(t) > 8 else "••••••••"
+            config["has_token"] = True
 
     # Build webhook URL for display
     host = request.headers.get("host", "localhost:8000")
@@ -682,6 +688,44 @@ async def wa_conversation(session_id: str, request: Request):
     if not cid:
         raise HTTPException(status_code=400, detail="No client context")
     return {"messages": get_session_messages(session_id, 100, cid)}
+
+
+class WhatsAppSendReq(BaseModel):
+    phone: str
+    message: str
+
+@app.post("/admin/whatsapp/send")
+async def wa_send_message(req: WhatsAppSendReq, request: Request):
+    """Send a manual WhatsApp message from admin panel."""
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    config = get_whatsapp_config(cid)
+    if not config or not config.get("twilio_account_sid") or not config.get("twilio_auth_token"):
+        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
+    if not config.get("twilio_whatsapp_number"):
+        raise HTTPException(status_code=400, detail="WhatsApp number not configured")
+
+    phone = req.phone.strip()
+    if not phone.startswith("+"):
+        phone = "+" + phone
+
+    try:
+        from twilio.rest import Client as TwilioClient
+        tc = TwilioClient(config["twilio_account_sid"], config["twilio_auth_token"])
+        tc.messages.create(
+            body=req.message,
+            from_=f"whatsapp:{config['twilio_whatsapp_number']}",
+            to=f"whatsapp:{phone}",
+        )
+        # Save the outgoing message to the conversation
+        from database import save_message
+        session_id = f"wa_{phone}"
+        save_message(session_id, 'bot', req.message, 'whatsapp', cid)
+        return {"status": "ok", "message": "Message sent!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send: {str(e)}")
 
 
 @app.get("/")

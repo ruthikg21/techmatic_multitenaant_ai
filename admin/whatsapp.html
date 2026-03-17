@@ -27,6 +27,16 @@
     .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
     .tab-content { display:none; }
     .tab-content.active { display:block; }
+    .send-bar { display:flex; gap:8px; padding:12px 16px; border-top:1px solid #f0f0f0; flex-shrink:0; background:#fff; }
+    .send-bar input { flex:1; padding:9px 14px; border:1.5px solid #ddd; border-radius:8px; font-size:13px; outline:none; }
+    .send-bar input:focus { border-color:#25D366; }
+    .send-bar button { padding:9px 16px; border:none; border-radius:8px; background:#25D366; color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; }
+    .send-bar button:hover { background:#128C7E; }
+    .send-bar button:disabled { opacity:0.5; cursor:not-allowed; }
+    .new-chat-bar { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid #f0f0f0; flex-shrink:0; }
+    .new-chat-bar input { flex:1; padding:7px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:12px; outline:none; }
+    .new-chat-bar input:focus { border-color:#25D366; }
+    .new-chat-bar button { padding:7px 12px; border:none; border-radius:6px; background:#25D366; color:#fff; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
   </style>
 </head>
 
@@ -84,10 +94,11 @@
           <div class="tab-bar">
             <button class="tab-btn active" onclick="switchTab('config')"><i class="fas fa-cog"></i> Configuration</button>
             <button class="tab-btn" onclick="switchTab('chats')"><i class="fas fa-comments"></i> WhatsApp Chats</button>
+            <button class="tab-btn" onclick="switchTab('send')"><i class="fas fa-paper-plane"></i> Send Message</button>
             <button class="tab-btn" onclick="switchTab('setup')"><i class="fas fa-book"></i> Setup Guide</button>
           </div>
 
-          <!-- ═══ CONFIG TAB ═══ -->
+          <!-- CONFIG TAB -->
           <div id="tab-config" class="tab-content active">
 
             <!-- Enable/Disable -->
@@ -174,7 +185,7 @@
             </div>
           </div>
 
-          <!-- ═══ CHATS TAB ═══ -->
+          <!-- CHATS TAB -->
           <div id="tab-chats" class="tab-content">
             <div class="card" style="height:calc(100vh - 220px);display:flex;flex-direction:column;overflow:hidden;">
               <div class="card-header" style="flex-shrink:0;">
@@ -215,12 +226,48 @@
                       <p>Select a chat to view messages</p>
                     </div>
                   </div>
+                  <!-- Reply bar for active chat -->
+                  <div id="waChatReplyBar" class="send-bar" style="display:none;">
+                    <input type="text" id="waChatReplyInput" placeholder="Type a reply..." onkeydown="if(event.key==='Enter')sendChatReply()">
+                    <button onclick="sendChatReply()" id="waChatReplyBtn"><i class="fab fa-whatsapp"></i> Send</button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- ═══ SETUP GUIDE TAB ═══ -->
+          <!-- SEND MESSAGE TAB -->
+          <div id="tab-send" class="tab-content">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><i class="fas fa-paper-plane"></i> Send WhatsApp Message</div>
+              </div>
+              <div class="card-body">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
+                  Send a manual WhatsApp message to any number. The recipient must have messaged your Twilio WhatsApp number first (Twilio sandbox requirement).
+                </p>
+                <div class="form-group">
+                  <label class="form-label" for="sendPhone">
+                    Phone Number
+                    <span>Include country code (e.g. +919876543210)</span>
+                  </label>
+                  <input type="text" id="sendPhone" class="form-control" placeholder="+919876543210">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="sendMessage">
+                    Message
+                    <span>The text to send</span>
+                  </label>
+                  <textarea id="sendMessage" class="form-control" rows="4" placeholder="Type your message here..."></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="sendManualMessage()" id="sendManualBtn" style="background:linear-gradient(135deg,#25D366,#128C7E);">
+                  <i class="fab fa-whatsapp"></i> Send WhatsApp Message
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SETUP GUIDE TAB -->
           <div id="tab-setup" class="tab-content">
             <div class="card">
               <div class="card-header">
@@ -309,8 +356,9 @@
     async function loadConfig() {
       try {
         const d = await apiFetch('/admin/whatsapp');
-        document.getElementById('waEnabled').checked = d.enabled === 1;
-        document.getElementById('waEnabledLabel').textContent = d.enabled === 1 ? 'Enabled' : 'Disabled';
+        const isEnabled = d.enabled === 1 || d.enabled === true;
+        document.getElementById('waEnabled').checked = isEnabled;
+        document.getElementById('waEnabledLabel').textContent = isEnabled ? 'Enabled' : 'Disabled';
         document.getElementById('twilioSid').value = d.twilio_account_sid || '';
         document.getElementById('twilioNumber').value = d.twilio_whatsapp_number || '';
         document.getElementById('webhookUrl').textContent = d.webhook_url || '';
@@ -318,12 +366,15 @@
         if (d.has_token) {
           document.getElementById('tokenStatus').innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i> Auth token is saved';
           document.getElementById('twilioToken').placeholder = 'Leave blank to keep existing token';
+        } else {
+          document.getElementById('tokenStatus').innerHTML = '';
+          document.getElementById('twilioToken').placeholder = 'Enter your Twilio Auth Token';
         }
 
         // Update status badge
         const badge = document.getElementById('waStatusBadge');
         const statusText = document.getElementById('waStatusText');
-        if (d.enabled === 1 && d.twilio_account_sid && d.has_token) {
+        if (isEnabled && d.twilio_account_sid && d.has_token && d.twilio_whatsapp_number) {
           badge.className = 'wa-status connected';
           statusText.textContent = 'Connected';
         } else {
@@ -377,6 +428,32 @@
       navigator.clipboard.writeText(url).then(() => showAlert('Webhook URL copied!'));
     }
 
+    /* ── Send Manual Message ── */
+    async function sendManualMessage() {
+      const phone = document.getElementById('sendPhone').value.trim();
+      const message = document.getElementById('sendMessage').value.trim();
+      if (!phone || !message) {
+        showAlert('Please enter both phone number and message.', 'error');
+        return;
+      }
+      const btn = document.getElementById('sendManualBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;"></div> Sending...';
+      try {
+        const d = await apiFetch('/admin/whatsapp/send', {
+          method: 'POST',
+          body: JSON.stringify({ phone, message }),
+        });
+        showAlert('Message sent successfully!');
+        document.getElementById('sendMessage').value = '';
+      } catch (e) {
+        showAlert(e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fab fa-whatsapp"></i> Send WhatsApp Message';
+      }
+    }
+
     /* ── WhatsApp Chats ── */
     let waAllSessions = [];
     let waActiveSession = null;
@@ -416,7 +493,7 @@
             <span style="font-size:13px;font-weight:500;">${esc(phone)}</span>
             <span class="badge badge-new" style="font-size:10px;margin-left:auto;">${s.msg_count}</span>
           </div>
-          <div class="session-preview">${esc((s.last_user_msg || '—').slice(0, 50))}</div>
+          <div class="session-preview">${esc((s.last_user_msg || '\u2014').slice(0, 50))}</div>
           <div class="session-meta">${fmtTimeAgo(s.last_msg)}</div>
         </div>`;
       }).join('');
@@ -428,6 +505,8 @@
       const phone = sessionId.replace('wa_', '');
       document.getElementById('waChatHeader').style.display = 'block';
       document.getElementById('waChatPhone').textContent = phone;
+      document.getElementById('waChatReplyBar').style.display = 'flex';
+      document.getElementById('waChatReplyInput').value = '';
       const chatEl = document.getElementById('waChatMessages');
       chatEl.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loading-spinner" style="margin:auto;"></div></div>';
 
@@ -455,6 +534,33 @@
         chatEl.scrollTop = chatEl.scrollHeight;
       } catch (e) {
         chatEl.innerHTML = `<div class="alert alert-error" style="margin:16px;">${esc(e.message)}</div>`;
+      }
+    }
+
+    /* ── Reply from chat view ── */
+    async function sendChatReply() {
+      if (!waActiveSession) return;
+      const input = document.getElementById('waChatReplyInput');
+      const message = input.value.trim();
+      if (!message) return;
+      const phone = waActiveSession.replace('wa_', '');
+      const btn = document.getElementById('waChatReplyBtn');
+      btn.disabled = true;
+      input.disabled = true;
+      try {
+        await apiFetch('/admin/whatsapp/send', {
+          method: 'POST',
+          body: JSON.stringify({ phone, message }),
+        });
+        input.value = '';
+        // Reload the chat to show the sent message
+        await openWaChat(waActiveSession);
+      } catch (e) {
+        showAlert(e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        input.disabled = false;
+        input.focus();
       }
     }
 
