@@ -174,12 +174,40 @@
                 <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
                   Copy this URL and paste it in your Twilio WhatsApp Sandbox or Sender configuration as the webhook for incoming messages.
                 </p>
-                <div class="webhook-box">
+
+                <!-- Auto-detected URL -->
+                <label class="form-label">Auto-detected URL <span>(from server)</span></label>
+                <div class="webhook-box mb-3">
                   <code id="webhookUrl">Loading...</code>
                   <button class="copy-btn" onclick="copyWebhook()"><i class="fas fa-copy"></i> Copy</button>
                 </div>
+
+                <!-- Custom / ngrok URL -->
+                <div class="form-group">
+                  <label class="form-label" for="customWebhook">
+                    Custom Webhook URL
+                    <span>Use if running locally with ngrok or a reverse proxy</span>
+                  </label>
+                  <div style="display:flex;gap:8px;">
+                    <input type="text" id="customWebhook" class="form-control" placeholder="https://your-ngrok-url.ngrok-free.app/webhook/whatsapp" style="flex:1;">
+                    <button class="copy-btn" style="padding:9px 14px;white-space:nowrap;" onclick="copyCustomWebhook()"><i class="fas fa-copy"></i> Copy</button>
+                  </div>
+                  <div class="form-hint" style="margin-top:6px;">
+                    If your server is on <strong>localhost</strong>, Twilio can't reach it. Run <code>ngrok http 8000</code> and paste the HTTPS URL above with <code>/webhook/whatsapp</code> appended.
+                  </div>
+                </div>
+
                 <div class="form-hint" style="margin-top:8px;">
                   Set this as the <strong>"WHEN A MESSAGE COMES IN"</strong> webhook URL in Twilio. Method: <strong>POST</strong>.
+                </div>
+
+                <!-- Warning for localhost -->
+                <div id="localhostWarning" class="alert alert-warning" style="margin-top:12px;display:none;">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <div>
+                    <strong>Localhost detected!</strong> Twilio cannot reach <code>localhost</code>. You need a public URL.
+                    Run <code>ngrok http 8000</code> to get one, then paste the ngrok HTTPS URL in the Custom Webhook field above and set it in Twilio.
+                  </div>
                 </div>
               </div>
             </div>
@@ -291,26 +319,35 @@
                 <div class="setup-step">
                   <span class="step-number">3</span>
                   <div class="setup-step-text">
-                    <strong>Configure the Webhook</strong><br>
-                    In the Twilio WhatsApp Sandbox settings, set the <strong>"WHEN A MESSAGE COMES IN"</strong> field to your webhook URL shown in the Configuration tab. Method should be <code>POST</code>.
+                    <strong>Make Your Server Publicly Accessible</strong><br>
+                    Twilio needs to reach your server from the internet. If running locally, install <a href="https://ngrok.com" target="_blank" style="color:var(--primary);">ngrok</a> and run:<br>
+                    <code>ngrok http 8000</code><br>
+                    Copy the HTTPS URL (e.g. <code>https://abc123.ngrok-free.app</code>) and append <code>/webhook/whatsapp</code> to get your webhook URL. If deployed on a server, use your domain directly.
                   </div>
                 </div>
                 <div class="setup-step">
                   <span class="step-number">4</span>
+                  <div class="setup-step-text">
+                    <strong>Configure the Webhook in Twilio</strong><br>
+                    In the Twilio WhatsApp Sandbox settings, set the <strong>"WHEN A MESSAGE COMES IN"</strong> field to your webhook URL (e.g. <code>https://abc123.ngrok-free.app/webhook/whatsapp</code>). Method should be <code>POST</code>.
+                  </div>
+                </div>
+                <div class="setup-step">
+                  <span class="step-number">5</span>
                   <div class="setup-step-text">
                     <strong>Enter Credentials Here</strong><br>
                     Paste your <strong>Account SID</strong>, <strong>Auth Token</strong>, and the <strong>Twilio WhatsApp number</strong> (sandbox or production) in the Configuration tab. Enable the integration and save.
                   </div>
                 </div>
                 <div class="setup-step">
-                  <span class="step-number">5</span>
+                  <span class="step-number">6</span>
                   <div class="setup-step-text">
                     <strong>Test the Connection</strong><br>
                     Click <strong>"Test Connection"</strong> to verify your Twilio credentials. Then send a WhatsApp message to your Twilio number — the AI bot will reply using the same behavior configured in your AI Settings.
                   </div>
                 </div>
                 <div class="setup-step">
-                  <span class="step-number">6</span>
+                  <span class="step-number">7</span>
                   <div class="setup-step-text">
                     <strong>Go to Production (optional)</strong><br>
                     To use a dedicated WhatsApp Business number, apply for a Twilio WhatsApp Sender in the Twilio Console. Once approved, update the number here and set the webhook URL in the sender configuration.
@@ -361,7 +398,16 @@
         document.getElementById('waEnabledLabel').textContent = isEnabled ? 'Enabled' : 'Disabled';
         document.getElementById('twilioSid').value = d.twilio_account_sid || '';
         document.getElementById('twilioNumber').value = d.twilio_whatsapp_number || '';
-        document.getElementById('webhookUrl').textContent = d.webhook_url || '';
+        const webhookUrl = d.webhook_url || '';
+        document.getElementById('webhookUrl').textContent = webhookUrl;
+
+        // Show localhost warning
+        const warn = document.getElementById('localhostWarning');
+        if (webhookUrl.includes('localhost') || webhookUrl.includes('127.0.0.1')) {
+          warn.style.display = 'flex';
+        } else {
+          warn.style.display = 'none';
+        }
 
         if (d.has_token) {
           document.getElementById('tokenStatus').innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i> Auth token is saved';
@@ -426,6 +472,15 @@
     function copyWebhook() {
       const url = document.getElementById('webhookUrl').textContent;
       navigator.clipboard.writeText(url).then(() => showAlert('Webhook URL copied!'));
+    }
+
+    function copyCustomWebhook() {
+      const url = document.getElementById('customWebhook').value.trim();
+      if (!url) {
+        showAlert('Enter a custom webhook URL first.', 'warning');
+        return;
+      }
+      navigator.clipboard.writeText(url).then(() => showAlert('Custom webhook URL copied!'));
     }
 
     /* ── Send Manual Message ── */

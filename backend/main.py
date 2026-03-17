@@ -555,13 +555,13 @@ async def get_embed_code(client_id: int, request: Request):
 # WHATSAPP — TWILIO WEBHOOK (public — receives incoming WhatsApp messages)
 # ══════════════════════════════════════════════════════════════════════════════
 
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import Response
 
 @app.post("/webhook/whatsapp")
 async def whatsapp_webhook(request: Request):
     """
     Twilio sends incoming WhatsApp messages here.
-    Matches the sender's Twilio number to a client, runs the AI, replies via Twilio.
+    Returns TwiML XML response — Twilio requires this format.
     """
     form = await request.form()
     from_number = form.get("From", "")        # e.g. whatsapp:+919876543210
@@ -569,14 +569,20 @@ async def whatsapp_webhook(request: Request):
     body = form.get("Body", "").strip()
     sender_name = form.get("ProfileName", "")
 
+    print(f"[WhatsApp Webhook] From={from_number} To={to_number} Body={body[:50] if body else '(empty)'}")
+
+    # Empty TwiML for invalid requests
+    empty_twiml = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
+
     if not body or not to_number:
-        return PlainTextResponse("", status_code=200)
+        return Response(content=empty_twiml, media_type="application/xml")
 
     # Strip "whatsapp:" prefix for lookup
     clean_to = to_number.replace("whatsapp:", "").strip()
     wa_config = get_whatsapp_config_by_phone(clean_to)
     if not wa_config or not wa_config.get("client_active"):
-        return PlainTextResponse("", status_code=200)
+        print(f"[WhatsApp Webhook] No config found for number: {clean_to}")
+        return Response(content=empty_twiml, media_type="application/xml")
 
     client_id = wa_config["client_id"]
 
@@ -585,21 +591,28 @@ async def whatsapp_webhook(request: Request):
     session_id = f"wa_{clean_from}"
 
     # Run through the same AI engine with source='whatsapp'
-    reply = await handle_incoming_message("whatsapp", body, session_id, client_id)
-
-    # Send reply back via Twilio
     try:
-        from twilio.rest import Client as TwilioClient
-        twilio_client = TwilioClient(wa_config["twilio_account_sid"], wa_config["twilio_auth_token"])
-        twilio_client.messages.create(
-            body=reply,
-            from_=f"whatsapp:{wa_config['twilio_whatsapp_number']}",
-            to=from_number,
-        )
+        reply = await handle_incoming_message("whatsapp", body, session_id, client_id)
     except Exception as e:
-        print(f"[WhatsApp] Failed to send reply: {e}")
+        print(f"[WhatsApp Webhook] AI error: {e}")
+        reply = "Sorry, something went wrong. Please try again."
 
-    return PlainTextResponse("", status_code=200)
+    # Escape XML special characters in reply
+    import html
+    safe_reply = html.escape(reply)
+
+    # Return TwiML XML response — Twilio reads this and sends the message
+    twiml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{safe_reply}</Message></Response>'
+    return Response(content=twiml, media_type="application/xml")
+
+
+@app.get("/webhook/whatsapp")
+async def whatsapp_webhook_verify():
+    """GET handler so Twilio can verify the webhook URL is reachable."""
+    return Response(
+        content='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        media_type="application/xml"
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
