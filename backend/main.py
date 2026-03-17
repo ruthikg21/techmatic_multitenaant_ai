@@ -581,15 +581,22 @@ async def whatsapp_webhook_verify(request: Request):
     raise HTTPException(status_code=400, detail="Missing verification parameters")
 
 
+import asyncio
+import json as json_module
+
 @app.post("/webhook/whatsapp")
 async def whatsapp_webhook(request: Request):
     """
     Meta Cloud API sends incoming WhatsApp messages here.
-    We parse the message, run the AI, and reply via the Graph API.
+    We parse the message, run the AI in the background, and reply via the Graph API.
+    Must return 200 immediately — Meta times out after ~15s.
     """
     try:
-        body = await request.json()
-    except Exception:
+        raw_body = await request.body()
+        body = json_module.loads(raw_body)
+        print(f"[WhatsApp Webhook] Received: {raw_body[:500]}")
+    except Exception as ex:
+        print(f"[WhatsApp Webhook] Failed to parse body: {ex}")
         return {"status": "ok"}
 
     # Meta webhook payload structure
@@ -598,17 +605,37 @@ async def whatsapp_webhook(request: Request):
         changes = e.get("changes", [])
         for change in changes:
             value = change.get("value", {})
-            messages = value.get("messages", [])
             metadata = value.get("metadata", {})
             phone_number_id = metadata.get("phone_number_id", "")
 
+            # Skip status updates (delivered, read, etc.)
+            if "statuses" in value and "messages" not in value:
+                print(f"[WhatsApp] Status update, skipping")
+                continue
+
+            messages = value.get("messages", [])
             if not messages or not phone_number_id:
+                print(f"[WhatsApp] No messages or no phone_number_id in payload")
                 continue
 
             # Look up client config by phone number ID
-            wa_config = get_whatsapp_config_by_phone_number_id(phone_number_id)
-            if not wa_config or not wa_config.get("client_active"):
-                print(f"[WhatsApp] No config for phone_number_id={phone_number_id}")
+            wa_config = get_whatsapp_config_by_phone_number_id(str(phone_number_id).strip())
+            if not wa_config:
+                # Try matching against all enabled configs
+                print(f"[WhatsApp] No exact match for phone_number_id={phone_number_id}, trying all configs...")
+                all_cfgs = get_all_whatsapp_configs_enabled()
+                wa_config = None
+                for cfg in all_cfgs:
+                    stored = str(cfg.get("meta_phone_number_id", "")).strip()
+                    if stored == str(phone_number_id).strip():
+                        wa_config = cfg
+                        break
+                if not wa_config:
+                    print(f"[WhatsApp] No config found for phone_number_id={phone_number_id}. Stored configs: {[c.get('meta_phone_number_id') for c in all_cfgs]}")
+                    continue
+
+            if not wa_config.get("client_active"):
+                print(f"[WhatsApp] Client not active for phone_number_id={phone_number_id}")
                 continue
 
             client_id = wa_config["client_id"]
@@ -617,51 +644,57 @@ async def whatsapp_webhook(request: Request):
             for msg in messages:
                 msg_type = msg.get("type")
                 from_number = msg.get("from", "")  # e.g. 919876543210
-                sender_name = ""
-                contacts = value.get("contacts", [])
-                if contacts:
-                    sender_name = contacts[0].get("profile", {}).get("name", "")
 
-                # Only handle text messages
+                # Only handle text messages for now
                 if msg_type != "text":
+                    print(f"[WhatsApp] Non-text message type: {msg_type}, skipping")
                     continue
 
                 text = msg.get("text", {}).get("body", "").strip()
                 if not text:
                     continue
 
-                print(f"[WhatsApp] From={from_number} Text={text[:50]}")
+                print(f"[WhatsApp] Incoming from={from_number} text={text[:80]}")
 
                 session_id = f"wa_{from_number}"
 
-                # Run through the same AI engine
-                try:
-                    reply = await handle_incoming_message("whatsapp", text, session_id, client_id)
-                except Exception as ex:
-                    print(f"[WhatsApp] AI error: {ex}")
-                    reply = "Sorry, something went wrong. Please try again."
-
-                # Send reply via Meta Graph API
-                try:
-                    async with httpx.AsyncClient() as client:
-                        await client.post(
-                            f"https://graph.facebook.com/v21.0/{phone_number_id}/messages",
-                            headers={
-                                "Authorization": f"Bearer {access_token}",
-                                "Content-Type": "application/json",
-                            },
-                            json={
-                                "messaging_product": "whatsapp",
-                                "to": from_number,
-                                "type": "text",
-                                "text": {"body": reply},
-                            },
-                            timeout=30,
-                        )
-                except Exception as ex:
-                    print(f"[WhatsApp] Failed to send reply: {ex}")
+                # Process in background so we return 200 immediately
+                asyncio.ensure_future(
+                    _process_wa_message(text, session_id, client_id, from_number, phone_number_id, access_token)
+                )
 
     return {"status": "ok"}
+
+
+async def _process_wa_message(text, session_id, client_id, from_number, phone_number_id, access_token):
+    """Background task: run AI and send reply via Meta Graph API."""
+    try:
+        reply = await handle_incoming_message("whatsapp", text, session_id, client_id)
+        print(f"[WhatsApp] AI reply for {from_number}: {reply[:80]}")
+    except Exception as ex:
+        print(f"[WhatsApp] AI error: {ex}")
+        reply = "Sorry, something went wrong. Please try again."
+
+    # Send reply via Meta Graph API
+    try:
+        async with httpx.AsyncClient() as http_client:
+            resp = await http_client.post(
+                f"https://graph.facebook.com/v21.0/{phone_number_id}/messages",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "messaging_product": "whatsapp",
+                    "to": from_number,
+                    "type": "text",
+                    "text": {"body": reply},
+                },
+                timeout=30,
+            )
+            print(f"[WhatsApp] Send reply status={resp.status_code} body={resp.text[:200]}")
+    except Exception as ex:
+        print(f"[WhatsApp] Failed to send reply to {from_number}: {ex}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
