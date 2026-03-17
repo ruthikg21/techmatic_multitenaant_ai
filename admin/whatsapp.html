@@ -33,10 +33,6 @@
     .send-bar button { padding:9px 16px; border:none; border-radius:8px; background:#25D366; color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; }
     .send-bar button:hover { background:#128C7E; }
     .send-bar button:disabled { opacity:0.5; cursor:not-allowed; }
-    .new-chat-bar { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid #f0f0f0; flex-shrink:0; }
-    .new-chat-bar input { flex:1; padding:7px 10px; border:1.5px solid #ddd; border-radius:6px; font-size:12px; outline:none; }
-    .new-chat-bar input:focus { border-color:#25D366; }
-    .new-chat-bar button { padding:7px 12px; border:none; border-radius:6px; background:#25D366; color:#fff; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
   </style>
 </head>
 
@@ -98,7 +94,7 @@
             <button class="tab-btn" onclick="switchTab('setup')"><i class="fas fa-book"></i> Setup Guide</button>
           </div>
 
-          <!-- CONFIG TAB -->
+          <!-- ═══ CONFIG TAB ═══ -->
           <div id="tab-config" class="tab-content active">
 
             <!-- Enable/Disable -->
@@ -111,47 +107,55 @@
                 </label>
               </div>
               <div class="card-body">
-                <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:0;">
                   When enabled, your AI assistant will respond to WhatsApp messages using the same behavior and knowledge base configured in AI Settings.
                 </p>
               </div>
             </div>
 
-            <!-- Twilio Credentials -->
+            <!-- Meta API Credentials -->
             <div class="card mb-4">
               <div class="card-header">
-                <div class="card-title"><i class="fas fa-key"></i> Twilio Credentials</div>
+                <div class="card-title"><i class="fab fa-facebook" style="color:#1877F2;"></i> Meta WhatsApp Cloud API</div>
               </div>
               <div class="card-body">
                 <div class="form-group">
-                  <label class="form-label" for="twilioSid">
-                    Account SID
-                    <span>Found in your Twilio Console Dashboard</span>
+                  <label class="form-label" for="metaPhoneId">
+                    Phone Number ID
+                    <span>From Meta Developer Console > WhatsApp > API Setup</span>
                   </label>
-                  <input type="text" id="twilioSid" class="form-control" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                  <input type="text" id="metaPhoneId" class="form-control" placeholder="e.g. 123456789012345">
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label" for="twilioToken">
-                    Auth Token
-                    <span>Found in your Twilio Console Dashboard</span>
+                  <label class="form-label" for="metaAccessToken">
+                    Permanent Access Token
+                    <span>System User token from Meta Business Settings</span>
                   </label>
                   <div class="pw-wrap">
-                    <input type="password" id="twilioToken" class="form-control" placeholder="Enter new token or leave blank to keep existing">
-                    <button class="pw-toggle" type="button" onclick="togglePw('twilioToken', this)">
+                    <input type="password" id="metaAccessToken" class="form-control" placeholder="Enter new token or leave blank to keep existing">
+                    <button class="pw-toggle" type="button" onclick="togglePw('metaAccessToken', this)">
                       <i class="fas fa-eye"></i>
                     </button>
                   </div>
                   <div id="tokenStatus" style="margin-top:6px;font-size:12px;color:var(--text-muted);"></div>
                 </div>
 
-                <div class="form-group mb-0">
-                  <label class="form-label" for="twilioNumber">
-                    WhatsApp Number
-                    <span>Your Twilio WhatsApp-enabled number (e.g. +14155238886)</span>
+                <div class="form-group">
+                  <label class="form-label" for="metaVerifyToken">
+                    Verify Token
+                    <span>Custom string you set when configuring the webhook in Meta</span>
                   </label>
-                  <input type="text" id="twilioNumber" class="form-control" placeholder="+14155238886">
-                  <div class="form-hint">For Twilio Sandbox, use the sandbox number. For production, use your approved WhatsApp Business number.</div>
+                  <input type="text" id="metaVerifyToken" class="form-control" placeholder="e.g. my_secret_verify_token_123">
+                  <div class="form-hint">This must match exactly what you enter in the Meta webhook configuration.</div>
+                </div>
+
+                <div class="form-group mb-0">
+                  <label class="form-label" for="metaWabaId">
+                    WhatsApp Business Account ID <span>(optional)</span>
+                  </label>
+                  <input type="text" id="metaWabaId" class="form-control" placeholder="e.g. 123456789012345">
+                  <div class="form-hint">Found in Meta Business Suite > WhatsApp Accounts. Used for reference.</div>
                 </div>
 
                 <div style="margin-top:20px;display:flex;gap:10px;">
@@ -172,48 +176,32 @@
               </div>
               <div class="card-body">
                 <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
-                  Copy this URL and paste it in your Twilio WhatsApp Sandbox or Sender configuration as the webhook for incoming messages.
+                  Copy this URL and paste it in your Meta App > WhatsApp > Configuration as the <strong>Callback URL</strong>.
                 </p>
 
-                <!-- Auto-detected URL -->
-                <label class="form-label">Auto-detected URL <span>(from server)</span></label>
+                <label class="form-label">Webhook Callback URL</label>
                 <div class="webhook-box mb-3">
                   <code id="webhookUrl">Loading...</code>
                   <button class="copy-btn" onclick="copyWebhook()"><i class="fas fa-copy"></i> Copy</button>
                 </div>
 
-                <!-- Custom / ngrok URL -->
-                <div class="form-group">
-                  <label class="form-label" for="customWebhook">
-                    Custom Webhook URL
-                    <span>Use if running locally with ngrok or a reverse proxy</span>
-                  </label>
-                  <div style="display:flex;gap:8px;">
-                    <input type="text" id="customWebhook" class="form-control" placeholder="https://your-ngrok-url.ngrok-free.app/webhook/whatsapp" style="flex:1;">
-                    <button class="copy-btn" style="padding:9px 14px;white-space:nowrap;" onclick="copyCustomWebhook()"><i class="fas fa-copy"></i> Copy</button>
-                  </div>
-                  <div class="form-hint" style="margin-top:6px;">
-                    If your server is on <strong>localhost</strong>, Twilio can't reach it. Run <code>ngrok http 8000</code> and paste the HTTPS URL above with <code>/webhook/whatsapp</code> appended.
-                  </div>
-                </div>
-
                 <div class="form-hint" style="margin-top:8px;">
-                  Set this as the <strong>"WHEN A MESSAGE COMES IN"</strong> webhook URL in Twilio. Method: <strong>POST</strong>.
+                  In Meta Developer Console, go to <strong>WhatsApp > Configuration > Callback URL</strong> and paste this URL. Set the <strong>Verify Token</strong> to match what you entered above.
+                  Subscribe to the <strong>"messages"</strong> webhook field.
                 </div>
 
                 <!-- Warning for localhost -->
                 <div id="localhostWarning" class="alert alert-warning" style="margin-top:12px;display:none;">
                   <i class="fas fa-exclamation-triangle"></i>
                   <div>
-                    <strong>Localhost detected!</strong> Twilio cannot reach <code>localhost</code>. You need a public URL.
-                    Run <code>ngrok http 8000</code> to get one, then paste the ngrok HTTPS URL in the Custom Webhook field above and set it in Twilio.
+                    <strong>Localhost detected!</strong> Meta cannot reach <code>localhost</code>. Deploy your backend to a public server (e.g. Render, Railway) or use <code>ngrok http 8000</code> for local testing.
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- CHATS TAB -->
+          <!-- ═══ CHATS TAB ═══ -->
           <div id="tab-chats" class="tab-content">
             <div class="card" style="height:calc(100vh - 220px);display:flex;flex-direction:column;overflow:hidden;">
               <div class="card-header" style="flex-shrink:0;">
@@ -254,7 +242,7 @@
                       <p>Select a chat to view messages</p>
                     </div>
                   </div>
-                  <!-- Reply bar for active chat -->
+                  <!-- Reply bar -->
                   <div id="waChatReplyBar" class="send-bar" style="display:none;">
                     <input type="text" id="waChatReplyInput" placeholder="Type a reply..." onkeydown="if(event.key==='Enter')sendChatReply()">
                     <button onclick="sendChatReply()" id="waChatReplyBtn"><i class="fab fa-whatsapp"></i> Send</button>
@@ -264,7 +252,7 @@
             </div>
           </div>
 
-          <!-- SEND MESSAGE TAB -->
+          <!-- ═══ SEND MESSAGE TAB ═══ -->
           <div id="tab-send" class="tab-content">
             <div class="card">
               <div class="card-header">
@@ -272,14 +260,14 @@
               </div>
               <div class="card-body">
                 <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
-                  Send a manual WhatsApp message to any number. The recipient must have messaged your Twilio WhatsApp number first (Twilio sandbox requirement).
+                  Send a manual WhatsApp message to any number. The recipient must have sent you a message within the last 24 hours (Meta's messaging window policy).
                 </p>
                 <div class="form-group">
                   <label class="form-label" for="sendPhone">
                     Phone Number
-                    <span>Include country code (e.g. +919876543210)</span>
+                    <span>Include country code without + (e.g. 919876543210)</span>
                   </label>
-                  <input type="text" id="sendPhone" class="form-control" placeholder="+919876543210">
+                  <input type="text" id="sendPhone" class="form-control" placeholder="919876543210">
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="sendMessage">
@@ -295,62 +283,60 @@
             </div>
           </div>
 
-          <!-- SETUP GUIDE TAB -->
+          <!-- ═══ SETUP GUIDE TAB ═══ -->
           <div id="tab-setup" class="tab-content">
             <div class="card">
               <div class="card-header">
-                <div class="card-title"><i class="fas fa-book"></i> Twilio WhatsApp Setup Guide</div>
+                <div class="card-title"><i class="fas fa-book"></i> Meta WhatsApp Cloud API Setup Guide</div>
               </div>
               <div class="card-body">
                 <div class="setup-step">
                   <span class="step-number">1</span>
                   <div class="setup-step-text">
-                    <strong>Create a Twilio Account</strong><br>
-                    Sign up at <a href="https://www.twilio.com" target="_blank" style="color:var(--primary);">twilio.com</a> and verify your account. Note your <strong>Account SID</strong> and <strong>Auth Token</strong> from the Console Dashboard.
+                    <strong>Create a Meta Developer App</strong><br>
+                    Go to <a href="https://developers.facebook.com" target="_blank" style="color:var(--primary);">developers.facebook.com</a>, create a new App (type: Business), and add the <strong>WhatsApp</strong> product to it.
                   </div>
                 </div>
                 <div class="setup-step">
                   <span class="step-number">2</span>
                   <div class="setup-step-text">
-                    <strong>Activate WhatsApp Sandbox (for testing)</strong><br>
-                    Go to <strong>Messaging > Try it out > Send a WhatsApp message</strong> in Twilio Console. Follow the instructions to join the sandbox by sending the join code from your WhatsApp to the sandbox number.
+                    <strong>Get Your Phone Number ID</strong><br>
+                    In the Meta Developer Console, go to <strong>WhatsApp > API Setup</strong>. You'll see your <strong>Phone Number ID</strong> and a test phone number. Copy the Phone Number ID.
                   </div>
                 </div>
                 <div class="setup-step">
                   <span class="step-number">3</span>
                   <div class="setup-step-text">
-                    <strong>Make Your Server Publicly Accessible</strong><br>
-                    Twilio needs to reach your server from the internet. If running locally, install <a href="https://ngrok.com" target="_blank" style="color:var(--primary);">ngrok</a> and run:<br>
-                    <code>ngrok http 8000</code><br>
-                    Copy the HTTPS URL (e.g. <code>https://abc123.ngrok-free.app</code>) and append <code>/webhook/whatsapp</code> to get your webhook URL. If deployed on a server, use your domain directly.
+                    <strong>Generate a Permanent Access Token</strong><br>
+                    Go to <strong>Meta Business Settings > System Users</strong>. Create a System User, assign the WhatsApp app with full control, and generate a token with <code>whatsapp_business_messaging</code> and <code>whatsapp_business_management</code> permissions.
                   </div>
                 </div>
                 <div class="setup-step">
                   <span class="step-number">4</span>
                   <div class="setup-step-text">
-                    <strong>Configure the Webhook in Twilio</strong><br>
-                    In the Twilio WhatsApp Sandbox settings, set the <strong>"WHEN A MESSAGE COMES IN"</strong> field to your webhook URL (e.g. <code>https://abc123.ngrok-free.app/webhook/whatsapp</code>). Method should be <code>POST</code>.
+                    <strong>Configure the Webhook</strong><br>
+                    In Meta Developer Console, go to <strong>WhatsApp > Configuration</strong>. Set the <strong>Callback URL</strong> to the webhook URL shown in the Configuration tab. Set the <strong>Verify Token</strong> to the same value you entered here. Subscribe to the <strong>"messages"</strong> field.
                   </div>
                 </div>
                 <div class="setup-step">
                   <span class="step-number">5</span>
                   <div class="setup-step-text">
                     <strong>Enter Credentials Here</strong><br>
-                    Paste your <strong>Account SID</strong>, <strong>Auth Token</strong>, and the <strong>Twilio WhatsApp number</strong> (sandbox or production) in the Configuration tab. Enable the integration and save.
+                    Paste your <strong>Phone Number ID</strong>, <strong>Access Token</strong>, and <strong>Verify Token</strong> in the Configuration tab. Enable the integration and save.
                   </div>
                 </div>
                 <div class="setup-step">
                   <span class="step-number">6</span>
                   <div class="setup-step-text">
                     <strong>Test the Connection</strong><br>
-                    Click <strong>"Test Connection"</strong> to verify your Twilio credentials. Then send a WhatsApp message to your Twilio number — the AI bot will reply using the same behavior configured in your AI Settings.
+                    Click <strong>"Test Connection"</strong> to verify your credentials. Then send a WhatsApp message to your business number — the AI bot will reply using your AI Settings configuration.
                   </div>
                 </div>
                 <div class="setup-step">
                   <span class="step-number">7</span>
                   <div class="setup-step-text">
-                    <strong>Go to Production (optional)</strong><br>
-                    To use a dedicated WhatsApp Business number, apply for a Twilio WhatsApp Sender in the Twilio Console. Once approved, update the number here and set the webhook URL in the sender configuration.
+                    <strong>Go Live</strong><br>
+                    Add a real phone number in Meta Business Suite, verify it, and update the Phone Number ID here. Submit your app for App Review with the <code>whatsapp_business_messaging</code> permission to message users beyond the 24-hour window using templates.
                   </div>
                 </div>
               </div>
@@ -396,8 +382,9 @@
         const isEnabled = d.enabled === 1 || d.enabled === true;
         document.getElementById('waEnabled').checked = isEnabled;
         document.getElementById('waEnabledLabel').textContent = isEnabled ? 'Enabled' : 'Disabled';
-        document.getElementById('twilioSid').value = d.twilio_account_sid || '';
-        document.getElementById('twilioNumber').value = d.twilio_whatsapp_number || '';
+        document.getElementById('metaPhoneId').value = d.meta_phone_number_id || '';
+        document.getElementById('metaVerifyToken').value = d.meta_verify_token || '';
+        document.getElementById('metaWabaId').value = d.meta_waba_id || '';
         const webhookUrl = d.webhook_url || '';
         document.getElementById('webhookUrl').textContent = webhookUrl;
 
@@ -410,17 +397,17 @@
         }
 
         if (d.has_token) {
-          document.getElementById('tokenStatus').innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i> Auth token is saved';
-          document.getElementById('twilioToken').placeholder = 'Leave blank to keep existing token';
+          document.getElementById('tokenStatus').innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i> Access token is saved';
+          document.getElementById('metaAccessToken').placeholder = 'Leave blank to keep existing token';
         } else {
           document.getElementById('tokenStatus').innerHTML = '';
-          document.getElementById('twilioToken').placeholder = 'Enter your Twilio Auth Token';
+          document.getElementById('metaAccessToken').placeholder = 'Enter your permanent access token';
         }
 
         // Update status badge
         const badge = document.getElementById('waStatusBadge');
         const statusText = document.getElementById('waStatusText');
-        if (isEnabled && d.twilio_account_sid && d.has_token && d.twilio_whatsapp_number) {
+        if (isEnabled && d.meta_phone_number_id && d.has_token) {
           badge.className = 'wa-status connected';
           statusText.textContent = 'Connected';
         } else {
@@ -441,11 +428,12 @@
       try {
         const payload = {
           enabled: document.getElementById('waEnabled').checked,
-          twilio_account_sid: document.getElementById('twilioSid').value,
-          twilio_whatsapp_number: document.getElementById('twilioNumber').value,
+          meta_phone_number_id: document.getElementById('metaPhoneId').value,
+          meta_verify_token: document.getElementById('metaVerifyToken').value,
+          meta_waba_id: document.getElementById('metaWabaId').value,
         };
-        const token = document.getElementById('twilioToken').value;
-        if (token.trim()) payload.twilio_auth_token = token;
+        const token = document.getElementById('metaAccessToken').value;
+        if (token.trim()) payload.meta_access_token = token;
 
         await apiFetch('/admin/whatsapp', {
           method: 'POST',
@@ -472,15 +460,6 @@
     function copyWebhook() {
       const url = document.getElementById('webhookUrl').textContent;
       navigator.clipboard.writeText(url).then(() => showAlert('Webhook URL copied!'));
-    }
-
-    function copyCustomWebhook() {
-      const url = document.getElementById('customWebhook').value.trim();
-      if (!url) {
-        showAlert('Enter a custom webhook URL first.', 'warning');
-        return;
-      }
-      navigator.clipboard.writeText(url).then(() => showAlert('Custom webhook URL copied!'));
     }
 
     /* ── Send Manual Message ── */
@@ -608,7 +587,6 @@
           body: JSON.stringify({ phone, message }),
         });
         input.value = '';
-        // Reload the chat to show the sent message
         await openWaChat(waActiveSession);
       } catch (e) {
         showAlert(e.message, 'error');

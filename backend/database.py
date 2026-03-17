@@ -105,19 +105,30 @@ def init_db():
             FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
         )""")
 
-        # ── WhatsApp config (per client) ──────────────────────────────────────────
+        # ── WhatsApp config (per client — Meta Cloud API) ─────────────────────────
         c.execute("""CREATE TABLE IF NOT EXISTS whatsapp_config (
             id SERIAL PRIMARY KEY,
             client_id INTEGER NOT NULL UNIQUE,
             enabled INTEGER DEFAULT 0,
-            twilio_account_sid TEXT,
-            twilio_auth_token TEXT,
-            twilio_whatsapp_number TEXT,
-            webhook_secret TEXT,
+            meta_phone_number_id TEXT,
+            meta_access_token TEXT,
+            meta_verify_token TEXT,
+            meta_waba_id TEXT,
+            meta_app_secret TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
         )""")
+
+        # Migration: add Meta columns if upgrading from Twilio schema
+        try:
+            c.execute("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS meta_phone_number_id TEXT")
+            c.execute("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS meta_access_token TEXT")
+            c.execute("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS meta_verify_token TEXT")
+            c.execute("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS meta_waba_id TEXT")
+            c.execute("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS meta_app_secret TEXT")
+        except Exception:
+            pass  # columns already exist
 
         # ── Seed super admin ──────────────────────────────────────────────────────
         c.execute("SELECT id FROM admin_users WHERE admin_id=%s", ('superadmin',))
@@ -564,14 +575,23 @@ def save_whatsapp_config(client_id, **kwargs):
     conn.commit()
     conn.close()
 
-def get_whatsapp_config_by_phone(phone_number):
-    """Look up WhatsApp config by Twilio WhatsApp number (for incoming webhook)."""
+def get_whatsapp_config_by_phone_number_id(phone_number_id):
+    """Look up WhatsApp config by Meta Phone Number ID (for incoming webhook)."""
     conn = get_conn()
     with get_db_cursor(conn) as c:
-        c.execute("SELECT wc.*, c.is_active as client_active FROM whatsapp_config wc JOIN clients c ON c.id=wc.client_id WHERE wc.twilio_whatsapp_number=%s AND wc.enabled=1", (phone_number,))
+        c.execute("SELECT wc.*, c.is_active as client_active FROM whatsapp_config wc JOIN clients c ON c.id=wc.client_id WHERE wc.meta_phone_number_id=%s AND wc.enabled=1", (phone_number_id,))
         row = c.fetchone()
     conn.close()
     return dict(row) if row else None
+
+def get_all_whatsapp_configs_enabled():
+    """Get all enabled WhatsApp configs (for webhook routing)."""
+    conn = get_conn()
+    with get_db_cursor(conn) as c:
+        c.execute("SELECT wc.*, c.is_active as client_active FROM whatsapp_config wc JOIN clients c ON c.id=wc.client_id WHERE wc.enabled=1")
+        rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 def get_whatsapp_sessions(client_id):
     """Get all WhatsApp sessions for a client."""

@@ -21,8 +21,8 @@ from database import (
     get_client_by_api_key, get_client_admins, update_client,
     toggle_client_active, regenerate_client_api_key,
     # WhatsApp
-    get_whatsapp_config, save_whatsapp_config, get_whatsapp_config_by_phone,
-    get_whatsapp_sessions
+    get_whatsapp_config, save_whatsapp_config, get_whatsapp_config_by_phone_number_id,
+    get_whatsapp_sessions, get_all_whatsapp_configs_enabled
 )
 from ai_engine import handle_incoming_message
 from scraper import scrape_url
@@ -130,9 +130,10 @@ class UpdateClientReq(BaseModel):
 
 class WhatsAppConfigReq(BaseModel):
     enabled: Optional[bool] = None
-    twilio_account_sid: Optional[str] = None
-    twilio_auth_token: Optional[str] = None
-    twilio_whatsapp_number: Optional[str] = None
+    meta_phone_number_id: Optional[str] = None
+    meta_access_token: Optional[str] = None
+    meta_verify_token: Optional[str] = None
+    meta_waba_id: Optional[str] = None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -552,67 +553,116 @@ async def get_embed_code(client_id: int, request: Request):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# WHATSAPP — TWILIO WEBHOOK (public — receives incoming WhatsApp messages)
+# WHATSAPP — META CLOUD API WEBHOOK (public — receives incoming WhatsApp messages)
 # ══════════════════════════════════════════════════════════════════════════════
 
-from fastapi.responses import Response
+from fastapi.responses import PlainTextResponse
+import httpx
+
+@app.get("/webhook/whatsapp")
+async def whatsapp_webhook_verify(request: Request):
+    """
+    Meta sends a GET request to verify the webhook URL.
+    We must return the hub.challenge value if the verify token matches.
+    """
+    params = request.query_params
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
+
+    if mode == "subscribe" and token and challenge:
+        # Check if any client has this verify token
+        all_configs = get_all_whatsapp_configs_enabled()
+        for cfg in all_configs:
+            if cfg.get("meta_verify_token") == token:
+                print(f"[WhatsApp Webhook] Verification successful for client_id={cfg['client_id']}")
+                return PlainTextResponse(content=challenge, status_code=200)
+        print(f"[WhatsApp Webhook] Verification failed — token mismatch")
+        raise HTTPException(status_code=403, detail="Verification token mismatch")
+    raise HTTPException(status_code=400, detail="Missing verification parameters")
+
 
 @app.post("/webhook/whatsapp")
 async def whatsapp_webhook(request: Request):
     """
-    Twilio sends incoming WhatsApp messages here.
-    Returns TwiML XML response — Twilio requires this format.
+    Meta Cloud API sends incoming WhatsApp messages here.
+    We parse the message, run the AI, and reply via the Graph API.
     """
-    form = await request.form()
-    from_number = form.get("From", "")        # e.g. whatsapp:+919876543210
-    to_number = form.get("To", "")            # e.g. whatsapp:+14155238886
-    body = form.get("Body", "").strip()
-    sender_name = form.get("ProfileName", "")
-
-    print(f"[WhatsApp Webhook] From={from_number} To={to_number} Body={body[:50] if body else '(empty)'}")
-
-    # Empty TwiML for invalid requests
-    empty_twiml = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
-
-    if not body or not to_number:
-        return Response(content=empty_twiml, media_type="application/xml")
-
-    # Strip "whatsapp:" prefix for lookup
-    clean_to = to_number.replace("whatsapp:", "").strip()
-    wa_config = get_whatsapp_config_by_phone(clean_to)
-    if not wa_config or not wa_config.get("client_active"):
-        print(f"[WhatsApp Webhook] No config found for number: {clean_to}")
-        return Response(content=empty_twiml, media_type="application/xml")
-
-    client_id = wa_config["client_id"]
-
-    # Use the sender phone as session_id for WhatsApp continuity
-    clean_from = from_number.replace("whatsapp:", "").strip()
-    session_id = f"wa_{clean_from}"
-
-    # Run through the same AI engine with source='whatsapp'
     try:
-        reply = await handle_incoming_message("whatsapp", body, session_id, client_id)
-    except Exception as e:
-        print(f"[WhatsApp Webhook] AI error: {e}")
-        reply = "Sorry, something went wrong. Please try again."
+        body = await request.json()
+    except Exception:
+        return {"status": "ok"}
 
-    # Escape XML special characters in reply
-    import html
-    safe_reply = html.escape(reply)
+    # Meta webhook payload structure
+    entry = body.get("entry", [])
+    for e in entry:
+        changes = e.get("changes", [])
+        for change in changes:
+            value = change.get("value", {})
+            messages = value.get("messages", [])
+            metadata = value.get("metadata", {})
+            phone_number_id = metadata.get("phone_number_id", "")
 
-    # Return TwiML XML response — Twilio reads this and sends the message
-    twiml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{safe_reply}</Message></Response>'
-    return Response(content=twiml, media_type="application/xml")
+            if not messages or not phone_number_id:
+                continue
 
+            # Look up client config by phone number ID
+            wa_config = get_whatsapp_config_by_phone_number_id(phone_number_id)
+            if not wa_config or not wa_config.get("client_active"):
+                print(f"[WhatsApp] No config for phone_number_id={phone_number_id}")
+                continue
 
-@app.get("/webhook/whatsapp")
-async def whatsapp_webhook_verify():
-    """GET handler so Twilio can verify the webhook URL is reachable."""
-    return Response(
-        content='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
-        media_type="application/xml"
-    )
+            client_id = wa_config["client_id"]
+            access_token = wa_config.get("meta_access_token")
+
+            for msg in messages:
+                msg_type = msg.get("type")
+                from_number = msg.get("from", "")  # e.g. 919876543210
+                sender_name = ""
+                contacts = value.get("contacts", [])
+                if contacts:
+                    sender_name = contacts[0].get("profile", {}).get("name", "")
+
+                # Only handle text messages
+                if msg_type != "text":
+                    continue
+
+                text = msg.get("text", {}).get("body", "").strip()
+                if not text:
+                    continue
+
+                print(f"[WhatsApp] From={from_number} Text={text[:50]}")
+
+                session_id = f"wa_{from_number}"
+
+                # Run through the same AI engine
+                try:
+                    reply = await handle_incoming_message("whatsapp", text, session_id, client_id)
+                except Exception as ex:
+                    print(f"[WhatsApp] AI error: {ex}")
+                    reply = "Sorry, something went wrong. Please try again."
+
+                # Send reply via Meta Graph API
+                try:
+                    async with httpx.AsyncClient() as client:
+                        await client.post(
+                            f"https://graph.facebook.com/v21.0/{phone_number_id}/messages",
+                            headers={
+                                "Authorization": f"Bearer {access_token}",
+                                "Content-Type": "application/json",
+                            },
+                            json={
+                                "messaging_product": "whatsapp",
+                                "to": from_number,
+                                "type": "text",
+                                "text": {"body": reply},
+                            },
+                            timeout=30,
+                        )
+                except Exception as ex:
+                    print(f"[WhatsApp] Failed to send reply: {ex}")
+
+    return {"status": "ok"}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -628,18 +678,20 @@ async def get_wa_settings(request: Request):
     raw = get_whatsapp_config(cid)
     config = {
         "enabled": 0,
-        "twilio_account_sid": "",
-        "twilio_whatsapp_number": "",
+        "meta_phone_number_id": "",
+        "meta_waba_id": "",
+        "meta_verify_token": "",
         "has_token": False,
-        "twilio_auth_token_masked": "",
+        "meta_access_token_masked": "",
     }
     if raw:
         config["enabled"] = raw.get("enabled", 0)
-        config["twilio_account_sid"] = raw.get("twilio_account_sid") or ""
-        config["twilio_whatsapp_number"] = raw.get("twilio_whatsapp_number") or ""
-        if raw.get("twilio_auth_token"):
-            t = raw["twilio_auth_token"]
-            config["twilio_auth_token_masked"] = t[:4] + "••••••••" + t[-4:] if len(t) > 8 else "••••••••"
+        config["meta_phone_number_id"] = raw.get("meta_phone_number_id") or ""
+        config["meta_waba_id"] = raw.get("meta_waba_id") or ""
+        config["meta_verify_token"] = raw.get("meta_verify_token") or ""
+        if raw.get("meta_access_token"):
+            t = raw["meta_access_token"]
+            config["meta_access_token_masked"] = t[:8] + "••••••••" + t[-4:] if len(t) > 12 else "••••••••"
             config["has_token"] = True
 
     # Build webhook URL for display
@@ -658,33 +710,44 @@ async def post_wa_settings(req: WhatsAppConfigReq, request: Request):
     updates = {}
     if req.enabled is not None:
         updates["enabled"] = 1 if req.enabled else 0
-    if req.twilio_account_sid is not None:
-        updates["twilio_account_sid"] = req.twilio_account_sid.strip()
-    if req.twilio_auth_token is not None and req.twilio_auth_token.strip():
-        updates["twilio_auth_token"] = req.twilio_auth_token.strip()
-    if req.twilio_whatsapp_number is not None:
-        updates["twilio_whatsapp_number"] = req.twilio_whatsapp_number.strip()
+    if req.meta_phone_number_id is not None:
+        updates["meta_phone_number_id"] = req.meta_phone_number_id.strip()
+    if req.meta_access_token is not None and req.meta_access_token.strip():
+        updates["meta_access_token"] = req.meta_access_token.strip()
+    if req.meta_verify_token is not None:
+        updates["meta_verify_token"] = req.meta_verify_token.strip()
+    if req.meta_waba_id is not None:
+        updates["meta_waba_id"] = req.meta_waba_id.strip()
     if updates:
         save_whatsapp_config(cid, **updates)
     return {"status": "ok"}
 
 @app.post("/admin/whatsapp/test")
 async def test_wa_connection(request: Request):
-    """Test Twilio credentials by fetching account info."""
+    """Test Meta WhatsApp credentials by calling the Graph API."""
     admin = get_admin(request)
     cid = admin["client_id"]
     if not cid:
         raise HTTPException(status_code=400, detail="No client context")
     config = get_whatsapp_config(cid)
-    if not config or not config.get("twilio_account_sid") or not config.get("twilio_auth_token"):
-        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
+    if not config or not config.get("meta_access_token") or not config.get("meta_phone_number_id"):
+        raise HTTPException(status_code=400, detail="Meta WhatsApp credentials not configured")
     try:
-        from twilio.rest import Client as TwilioClient
-        tc = TwilioClient(config["twilio_account_sid"], config["twilio_auth_token"])
-        account = tc.api.accounts(config["twilio_account_sid"]).fetch()
-        return {"status": "success", "message": f"Connected! Account: {account.friendly_name}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Twilio connection failed: {str(e)}")
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://graph.facebook.com/v21.0/{config['meta_phone_number_id']}",
+                headers={"Authorization": f"Bearer {config['meta_access_token']}"},
+                timeout=15,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                display_name = data.get("verified_name") or data.get("display_phone_number") or "WhatsApp Business"
+                return {"status": "success", "message": f"Connected! Phone: {display_name}"}
+            else:
+                err = resp.json().get("error", {}).get("message", resp.text)
+                raise HTTPException(status_code=500, detail=f"Meta API error: {err}")
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=500, detail=f"Connection failed: {str(e)}")
 
 @app.get("/admin/whatsapp/conversations")
 async def wa_conversations(request: Request):
@@ -709,34 +772,44 @@ class WhatsAppSendReq(BaseModel):
 
 @app.post("/admin/whatsapp/send")
 async def wa_send_message(req: WhatsAppSendReq, request: Request):
-    """Send a manual WhatsApp message from admin panel."""
+    """Send a manual WhatsApp message via Meta Cloud API."""
     admin = get_admin(request)
     cid = admin["client_id"]
     if not cid:
         raise HTTPException(status_code=400, detail="No client context")
     config = get_whatsapp_config(cid)
-    if not config or not config.get("twilio_account_sid") or not config.get("twilio_auth_token"):
-        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
-    if not config.get("twilio_whatsapp_number"):
-        raise HTTPException(status_code=400, detail="WhatsApp number not configured")
+    if not config or not config.get("meta_access_token") or not config.get("meta_phone_number_id"):
+        raise HTTPException(status_code=400, detail="Meta WhatsApp credentials not configured")
 
-    phone = req.phone.strip()
-    if not phone.startswith("+"):
-        phone = "+" + phone
+    phone = req.phone.strip().replace("+", "").replace(" ", "").replace("-", "")
 
     try:
-        from twilio.rest import Client as TwilioClient
-        tc = TwilioClient(config["twilio_account_sid"], config["twilio_auth_token"])
-        tc.messages.create(
-            body=req.message,
-            from_=f"whatsapp:{config['twilio_whatsapp_number']}",
-            to=f"whatsapp:{phone}",
-        )
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"https://graph.facebook.com/v21.0/{config['meta_phone_number_id']}/messages",
+                headers={
+                    "Authorization": f"Bearer {config['meta_access_token']}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "messaging_product": "whatsapp",
+                    "to": phone,
+                    "type": "text",
+                    "text": {"body": req.message},
+                },
+                timeout=30,
+            )
+            if resp.status_code not in (200, 201):
+                err = resp.json().get("error", {}).get("message", resp.text)
+                raise HTTPException(status_code=500, detail=f"Meta API error: {err}")
+
         # Save the outgoing message to the conversation
         from database import save_message
         session_id = f"wa_{phone}"
         save_message(session_id, 'bot', req.message, 'whatsapp', cid)
         return {"status": "ok", "message": "Message sent!"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send: {str(e)}")
 
