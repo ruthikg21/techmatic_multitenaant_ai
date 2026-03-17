@@ -3,7 +3,7 @@ from psycopg2.extras import RealDictCursor
 import hashlib
 import os
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -132,12 +132,12 @@ def init_db():
         c.execute("SELECT id FROM admin_users WHERE admin_id=%s", ('superadmin',))
         if not c.fetchone():
             c.execute("INSERT INTO admin_users (admin_id, password_hash, role, client_id, created_at) VALUES (%s,%s,%s,%s,%s)",
-                      ('superadmin', hash_password('Techmatic@2024'), 'superadmin', None, datetime.utcnow().isoformat()))
+                      ('superadmin', hash_password('Techmatic@2024'), 'superadmin', None, datetime.now(timezone.utc).isoformat()))
 
         # ── Seed default client (Techmatic Systems itself) ────────────────────────
         c.execute("SELECT id FROM clients WHERE client_slug=%s", ('techmatic',))
         if not c.fetchone():
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             api_key = generate_api_key()
             c.execute("""INSERT INTO clients (client_name, client_slug, widget_api_key, domain, is_active, created_at, updated_at)
                          VALUES (%s,%s,%s,%s,1,%s,%s) RETURNING id""",
@@ -240,7 +240,7 @@ def get_admin_info(admin_id):
 
 def create_client(client_name, client_slug, domain=None):
     conn = get_conn()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     api_key = generate_api_key()
     with conn.cursor() as c:
         c.execute("""INSERT INTO clients (client_name, client_slug, widget_api_key, domain, is_active, created_at, updated_at)
@@ -275,7 +275,7 @@ Your goals:
 
 def create_client_admin(admin_id, password, client_id):
     conn = get_conn()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     with conn.cursor() as c:
         c.execute("INSERT INTO admin_users (admin_id, password_hash, role, client_id, created_at) VALUES (%s,%s,%s,%s,%s)",
                      (admin_id, hash_password(password), 'client', client_id, now))
@@ -322,7 +322,7 @@ def get_client_admins(client_id):
 
 def update_client(client_id, **kwargs):
     conn = get_conn()
-    kwargs['updated_at'] = datetime.utcnow().isoformat()
+    kwargs['updated_at'] = datetime.now(timezone.utc).isoformat()
     cols = ", ".join(f"{k}=%s" for k in kwargs)
     with conn.cursor() as c:
         c.execute(f"UPDATE clients SET {cols} WHERE id=%s", list(kwargs.values()) + [client_id])
@@ -333,7 +333,7 @@ def toggle_client_active(client_id, is_active):
     conn = get_conn()
     with conn.cursor() as c:
         c.execute("UPDATE clients SET is_active=%s, updated_at=%s WHERE id=%s",
-                     (1 if is_active else 0, datetime.utcnow().isoformat(), client_id))
+                     (1 if is_active else 0, datetime.now(timezone.utc).isoformat(), client_id))
     conn.commit()
     conn.close()
 
@@ -342,7 +342,7 @@ def regenerate_client_api_key(client_id):
     new_key = generate_api_key()
     with conn.cursor() as c:
         c.execute("UPDATE clients SET widget_api_key=%s, updated_at=%s WHERE id=%s",
-                     (new_key, datetime.utcnow().isoformat(), client_id))
+                     (new_key, datetime.now(timezone.utc).isoformat(), client_id))
     conn.commit()
     conn.close()
     return new_key
@@ -362,7 +362,7 @@ def get_config(client_id=1):
 
 def save_config(client_id=1, **kwargs):
     conn = get_conn()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     with get_db_cursor(conn) as c:
         c.execute("SELECT id FROM ai_config WHERE client_id=%s", (client_id,))
         existing = c.fetchone()
@@ -386,7 +386,7 @@ def save_message(session_id, role, content, source='web', client_id=1):
     conn = get_conn()
     with conn.cursor() as c:
         c.execute("INSERT INTO messages (client_id, session_id, role, content, source, timestamp) VALUES (%s,%s,%s,%s,%s,%s)",
-                     (client_id, session_id, role, content, source, datetime.utcnow().isoformat()))
+                     (client_id, session_id, role, content, source, datetime.now(timezone.utc).isoformat()))
     conn.commit(); conn.close()
 
 def get_session_messages(session_id, limit=40, client_id=None):
@@ -430,7 +430,7 @@ def get_all_sessions(client_id=1):
 
 def upsert_lead(session_id, client_id=1, **kwargs):
     conn = get_conn()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     with get_db_cursor(conn) as c:
         c.execute("SELECT id FROM leads WHERE session_id=%s AND client_id=%s", (session_id, client_id))
         existing = c.fetchone()
@@ -458,7 +458,7 @@ def update_lead_status(lead_id, status, client_id=1):
     conn = get_conn()
     with conn.cursor() as c:
         c.execute("UPDATE leads SET status=%s, updated_at=%s WHERE id=%s AND client_id=%s",
-                     (status, datetime.utcnow().isoformat(), lead_id, client_id))
+                     (status, datetime.now(timezone.utc).isoformat(), lead_id, client_id))
     conn.commit(); conn.close()
 
 
@@ -478,7 +478,7 @@ def save_knowledge_content(source_id, title, content, client_id=1):
     conn = get_conn()
     with conn.cursor() as c:
         c.execute("UPDATE knowledge_sources SET title=%s, content=%s, scraped_at=%s, status='scraped' WHERE id=%s AND client_id=%s",
-                     (title, content, datetime.utcnow().isoformat(), source_id, client_id))
+                     (title, content, datetime.now(timezone.utc).isoformat(), source_id, client_id))
     conn.commit(); conn.close()
 
 def add_knowledge_url(url, client_id=1):
@@ -555,7 +555,7 @@ def get_whatsapp_config(client_id):
 
 def save_whatsapp_config(client_id, **kwargs):
     conn = get_conn()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     with get_db_cursor(conn) as c:
         c.execute("SELECT id FROM whatsapp_config WHERE client_id=%s", (client_id,))
         existing = c.fetchone()

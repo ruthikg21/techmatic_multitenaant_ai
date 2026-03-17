@@ -88,17 +88,26 @@ function showNotif(msg, type = 'success') {
 }
 
 /* ── Format helpers ── */
+function parseUTC(iso) {
+  // Backend stores UTC timestamps without 'Z' suffix — ensure JS treats them as UTC
+  if (!iso) return null;
+  if (!iso.endsWith('Z') && !iso.includes('+') && !iso.includes('T00:00:00')) {
+    iso = iso + 'Z';
+  }
+  return new Date(iso);
+}
 function fmtTime(iso) {
   if (!iso) return '—';
   try {
-    const d = new Date(iso);
-    return d.toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const d = parseUTC(iso);
+    return d.toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Kolkata' });
   } catch { return iso; }
 }
 function fmtTimeAgo(iso) {
   if (!iso) return '—';
   try {
-    const s = Math.floor((Date.now() - new Date(iso)) / 1000);
+    const s = Math.floor((Date.now() - parseUTC(iso)) / 1000);
+    if (s < 0) return 'just now';
     if (s < 60) return s + 's ago';
     if (s < 3600) return Math.floor(s/60) + 'm ago';
     if (s < 86400) return Math.floor(s/3600) + 'h ago';

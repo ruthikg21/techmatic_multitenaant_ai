@@ -791,20 +791,26 @@ function showAlert(containerId, type, msg, dismiss=true){
 
 function clearAlert(id){ $id(id).innerHTML=''; }
 
+function _parseUTC(ts){
+  if(!ts) return null;
+  if(!ts.endsWith('Z') && !ts.includes('+')) ts = ts + 'Z';
+  return new Date(ts);
+}
+
 function fmtDate(ts){
   if(!ts) return '—';
   try{
-    const d = new Date(ts);
-    return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) +
-           ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    const d = _parseUTC(ts);
+    return d.toLocaleDateString('en-IN',{month:'short',day:'numeric',year:'numeric', timeZone:'Asia/Kolkata'}) +
+           ' ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit', timeZone:'Asia/Kolkata'});
   }catch{ return ts; }
 }
 
 function fmtTime(ts){
   if(!ts) return '';
   try{
-    const d = new Date(ts);
-    return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    const d = _parseUTC(ts);
+    return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit', timeZone:'Asia/Kolkata'});
   }catch{ return ''; }
 }
 
