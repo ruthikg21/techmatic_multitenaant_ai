@@ -132,7 +132,6 @@ class WhatsAppConfigReq(BaseModel):
     enabled: Optional[bool] = None
     meta_phone_number_id: Optional[str] = None
     meta_access_token: Optional[str] = None
-    meta_verify_token: Optional[str] = None
     meta_waba_id: Optional[str] = None
 
 
@@ -714,13 +713,28 @@ async def post_wa_settings(req: WhatsAppConfigReq, request: Request):
         updates["meta_phone_number_id"] = req.meta_phone_number_id.strip()
     if req.meta_access_token is not None and req.meta_access_token.strip():
         updates["meta_access_token"] = req.meta_access_token.strip()
-    if req.meta_verify_token is not None:
-        updates["meta_verify_token"] = req.meta_verify_token.strip()
     if req.meta_waba_id is not None:
         updates["meta_waba_id"] = req.meta_waba_id.strip()
+
+    # Auto-generate verify token if none exists yet
+    existing = get_whatsapp_config(cid)
+    if not existing or not existing.get("meta_verify_token"):
+        updates["meta_verify_token"] = f"tm_verify_{secrets.token_hex(16)}"
+
     if updates:
         save_whatsapp_config(cid, **updates)
     return {"status": "ok"}
+
+@app.post("/admin/whatsapp/regenerate-verify-token")
+async def regenerate_verify_token(request: Request):
+    """Regenerate the webhook verify token."""
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    new_token = f"tm_verify_{secrets.token_hex(16)}"
+    save_whatsapp_config(cid, meta_verify_token=new_token)
+    return {"status": "ok", "meta_verify_token": new_token}
 
 @app.post("/admin/whatsapp/test")
 async def test_wa_connection(request: Request):

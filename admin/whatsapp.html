@@ -142,12 +142,16 @@
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label" for="metaVerifyToken">
+                  <label class="form-label">
                     Verify Token
-                    <span>Custom string you set when configuring the webhook in Meta</span>
+                    <span>Auto-generated — copy this and paste in Meta webhook config</span>
                   </label>
-                  <input type="text" id="metaVerifyToken" class="form-control" placeholder="e.g. my_secret_verify_token_123">
-                  <div class="form-hint">This must match exactly what you enter in the Meta webhook configuration.</div>
+                  <div class="webhook-box">
+                    <code id="metaVerifyToken" style="user-select:all;">Save config to generate</code>
+                    <button class="copy-btn" onclick="copyVerifyToken()" title="Copy verify token"><i class="fas fa-copy"></i> Copy</button>
+                    <button class="copy-btn" onclick="regenerateVerifyToken()" title="Generate new token"><i class="fas fa-sync-alt"></i> Regenerate</button>
+                  </div>
+                  <div class="form-hint">This is auto-generated. Copy it and paste as the <strong>Verify Token</strong> in Meta Developer Console when configuring the webhook.</div>
                 </div>
 
                 <div class="form-group mb-0">
@@ -315,14 +319,14 @@
                   <span class="step-number">4</span>
                   <div class="setup-step-text">
                     <strong>Configure the Webhook</strong><br>
-                    In Meta Developer Console, go to <strong>WhatsApp > Configuration</strong>. Set the <strong>Callback URL</strong> to the webhook URL shown in the Configuration tab. Set the <strong>Verify Token</strong> to the same value you entered here. Subscribe to the <strong>"messages"</strong> field.
+                    In Meta Developer Console, go to <strong>WhatsApp > Configuration</strong>. Set the <strong>Callback URL</strong> to the webhook URL shown in the Configuration tab. Copy the auto-generated <strong>Verify Token</strong> from the Configuration tab and paste it as the Verify Token in Meta. Subscribe to the <strong>"messages"</strong> field.
                   </div>
                 </div>
                 <div class="setup-step">
                   <span class="step-number">5</span>
                   <div class="setup-step-text">
                     <strong>Enter Credentials Here</strong><br>
-                    Paste your <strong>Phone Number ID</strong>, <strong>Access Token</strong>, and <strong>Verify Token</strong> in the Configuration tab. Enable the integration and save.
+                    Paste your <strong>Phone Number ID</strong> and <strong>Access Token</strong> in the Configuration tab. The <strong>Verify Token</strong> is auto-generated for you — just copy it. Enable the integration and save.
                   </div>
                 </div>
                 <div class="setup-step">
@@ -383,7 +387,7 @@
         document.getElementById('waEnabled').checked = isEnabled;
         document.getElementById('waEnabledLabel').textContent = isEnabled ? 'Enabled' : 'Disabled';
         document.getElementById('metaPhoneId').value = d.meta_phone_number_id || '';
-        document.getElementById('metaVerifyToken').value = d.meta_verify_token || '';
+        document.getElementById('metaVerifyToken').textContent = d.meta_verify_token || 'Save config to generate';
         document.getElementById('metaWabaId').value = d.meta_waba_id || '';
         const webhookUrl = d.webhook_url || '';
         document.getElementById('webhookUrl').textContent = webhookUrl;
@@ -429,7 +433,6 @@
         const payload = {
           enabled: document.getElementById('waEnabled').checked,
           meta_phone_number_id: document.getElementById('metaPhoneId').value,
-          meta_verify_token: document.getElementById('metaVerifyToken').value,
           meta_waba_id: document.getElementById('metaWabaId').value,
         };
         const token = document.getElementById('metaAccessToken').value;
@@ -460,6 +463,28 @@
     function copyWebhook() {
       const url = document.getElementById('webhookUrl').textContent;
       navigator.clipboard.writeText(url).then(() => showAlert('Webhook URL copied!'));
+    }
+
+    /* ── Copy verify token ── */
+    function copyVerifyToken() {
+      const token = document.getElementById('metaVerifyToken').textContent;
+      if (!token || token === 'Save config to generate') {
+        showAlert('Save configuration first to generate a verify token.', 'warning');
+        return;
+      }
+      navigator.clipboard.writeText(token).then(() => showAlert('Verify token copied!'));
+    }
+
+    /* ── Regenerate verify token ── */
+    async function regenerateVerifyToken() {
+      if (!confirm('Regenerate verify token? You will need to update it in Meta Developer Console.')) return;
+      try {
+        const d = await apiFetch('/admin/whatsapp/regenerate-verify-token', { method: 'POST' });
+        document.getElementById('metaVerifyToken').textContent = d.meta_verify_token;
+        showAlert('Verify token regenerated! Update it in Meta Developer Console.');
+      } catch (e) {
+        showAlert(e.message, 'error');
+      }
     }
 
     /* ── Send Manual Message ── */
