@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sample Client Website — Chatbot Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f4f6f8; color: #333; }
+    .hero {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #fff; padding: 80px 40px; text-align: center;
+    }
+    .hero h1 { font-size: 42px; margin-bottom: 16px; }
+    .hero p { font-size: 18px; opacity: 0.8; max-width: 600px; margin: 0 auto; }
+    .content { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    .card { background: #fff; border-radius: 12px; padding: 32px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .card h2 { font-size: 22px; margin-bottom: 12px; color: #1a1a2e; }
+    .card p { line-height: 1.7; color: #555; }
+    .note { background: #fff3cd; border: 1px solid #ffc107; padding: 16px 20px; border-radius: 8px; font-size: 14px; margin-bottom: 24px; }
+    .note strong { color: #856404; }
+    code { background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Sample Client Website</h1>
+  <p>This is a test page showing how the Techmatic AI chatbot widget appears on a client's website.</p>
+</div>
+
+<div class="content">
+  <div class="note">
+    <strong>Note:</strong> The chatbot widget should appear in the bottom-right corner of this page.
+    Click the red chat bubble to open it. Make sure the backend server is running at the URL configured below.
+  </div>
+
+  <div class="card">
+    <h2>How to embed on your website</h2>
+    <p>
+      Simply paste the embed code provided by Techmatic AI before the closing <code>&lt;/body&gt;</code> tag on any page of your website.
+      The chatbot will automatically appear in the bottom-right corner.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>About this page</h2>
+    <p>
+      This page simulates a client's actual website. The chatbot is loaded via the embed script below.
+      All conversations and leads from this widget will appear in the client's admin panel.
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TECHMATIC AI CHATBOT WIDGET — Paste this on client's website
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+  window.TM_WIDGET_CONFIG = {
+    apiKey: "tm_a89cc2f21739ea71de4d5f1e00aa6ad1372ce46889feb0955",     // Get from Super Admin panel
+    serverUrl: "http://localhost:8000"          // Your backend server URL
+  };
+</script>
+<script src="http://localhost:8000/static/widget/tm-chatbot.js" defer></script>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</body>
+</html>

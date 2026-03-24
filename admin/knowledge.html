@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowledge Base — Techmatic Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo"><div>
+      <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic" onerror="this.style.display='none'" style="height:28px;margin-bottom:4px;">
+      <div class="logo-text">Techmatic Systems</div><div class="logo-tag">AI Admin Panel</div>
+    </div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a href="dashboard.html" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="leads.html" class="nav-item"><i class="fas fa-users"></i> Leads</a>
+      <a href="conversations.html" class="nav-item"><i class="fas fa-comments"></i> Conversations</a>
+      <div class="nav-section-label" style="margin-top:8px;">Configuration</div>
+      <a href="settings.html" class="nav-item"><i class="fas fa-cog"></i> AI Settings</a>
+      <a href="knowledge.html" class="nav-item active"><i class="fas fa-database"></i> Knowledge Base</a>
+      <a href="whatsapp.html" class="nav-item"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+      <div class="nav-section-label" style="margin-top:8px;">Account</div>
+      <a href="account.html" class="nav-item"><i class="fas fa-user-shield"></i> Account</a>
+      <a href="../index.html" class="nav-item" target="_blank"><i class="fas fa-external-link-alt"></i> View Website</a>
+    </nav>
+    <div class="sidebar-footer"><div class="sidebar-user">
+      <div class="sidebar-user-avatar"><i class="fas fa-user"></i></div>
+      <div><div class="sidebar-user-name" id="adminIdDisplay">Admin</div><div class="sidebar-user-role">Administrator</div></div>
+    </div></div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title">Knowledge Base</div>
+      <div class="topbar-actions">
+        <div class="status-badge"><span class="status-dot"></span> Platform Active</div>
+        <button class="topbar-btn" onclick="loadKB()"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="topbar-btn danger" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div style="max-width:900px;">
+        <div id="alertArea"></div>
+
+        <!-- Add URL -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-plus-circle"></i> Add Knowledge Source</div>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-3" style="font-size:13.5px;">
+              Paste any URL — the AI will scrape its content and use it to answer questions. Add your website pages, service pages, documentation, etc.
+            </p>
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+              <div style="flex:1;min-width:280px;">
+                <label class="form-label" for="newUrl">URL to add</label>
+                <input type="url" id="newUrl" class="form-control" placeholder="https://www.techmaticsys.com/services">
+              </div>
+              <button class="btn btn-primary" onclick="addURL()">
+                <i class="fas fa-plus"></i> Add URL
+              </button>
+              <button class="btn btn-outline" id="scrapeAllBtn" onclick="scrapeAll()">
+                <i class="fas fa-spider"></i> Scrape All
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sources List -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-list"></i> Knowledge Sources</div>
+            <div id="kbSummary" class="text-muted" style="font-size:13px;"></div>
+          </div>
+
+          <div id="kbList">
+            <div style="padding:40px;text-align:center;">
+              <div class="loading-spinner" style="margin:auto;"></div>
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <span class="text-muted" style="font-size:12.5px;">
+              <i class="fas fa-info-circle"></i>
+              Scraped content is injected into every AI conversation. Scrape after adding new URLs.
+            </span>
+            <button class="btn btn-outline btn-sm" onclick="scrapeAll()" id="scrapeAllBtn2">
+              <i class="fas fa-spider"></i> Scrape All Now
+            </button>
+          </div>
+        </div>
+
+        <!-- Content preview -->
+        <div id="contentPreview" class="card mt-4" style="display:none;">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-file-alt"></i> Content Preview</div>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('contentPreview').style.display='none'">Close</button>
+          </div>
+          <div class="card-body">
+            <div id="contentPreviewTitle" class="fw-600 mb-3" style="font-size:14px;"></div>
+            <pre id="contentPreviewText" style="font-size:12px;white-space:pre-wrap;word-break:break-word;background:#f8f9fa;padding:14px;border-radius:8px;border:1px solid #e8e8e8;max-height:400px;overflow-y:auto;color:#333;"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="admin.js"></script>
+<script>
+  requireAuth();
+  let kbSources = [];
+
+  function showAlert(msg, type='success') {
+    const el = document.getElementById('alertArea');
+    el.innerHTML = `<div class="alert alert-${type}"><i class="fas fa-${type==='success'?'check-circle':type==='error'?'times-circle':'info-circle'}"></i><span>${msg}</span><button class="close-btn" onclick="this.parentElement.remove()">×</button></div>`;
+    if (type==='success') setTimeout(()=>el.innerHTML='', 5000);
+  }
+
+  async function loadKB() {
+    try {
+      const d = await apiFetch('/admin/knowledge');
+      kbSources = d.sources || [];
+      renderKB();
+      const scraped = kbSources.filter(s=>s.status==='scraped').length;
+      document.getElementById('kbSummary').textContent = `${scraped} of ${kbSources.length} scraped`;
+    } catch(e) { showAlert(e.message,'error'); }
+  }
+
+  function renderKB() {
+    const el = document.getElementById('kbList');
+    if (!kbSources.length) {
+      el.innerHTML = `<div class="empty-state" style="padding:48px;"><i class="fas fa-database"></i><p>No knowledge sources added yet.<br>Add URLs above to teach the AI about your website.</p></div>`;
+      return;
+    }
+    el.innerHTML = kbSources.map(s => `
+      <div class="kb-row">
+        <div class="kb-status-dot" style="background:${s.status==='scraped'?'#38a169':s.status==='error'?'#e53e3e':'#d69e2e'};" title="${s.status}"></div>
+        <div style="flex:1;min-width:0;">
+          <div class="kb-url">${esc(s.url)}</div>
+          <div class="kb-meta">
+            ${s.title ? esc(s.title)+' · ' : ''}
+            ${s.scraped_at ? 'Scraped '+fmtTimeAgo(s.scraped_at) : 'Not scraped yet'}
+            ${s.content ? ` · ${(s.content.length/1000).toFixed(1)}k chars` : ''}
+          </div>
+        </div>
+        ${kbBadge(s.status)}
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-outline btn-xs" onclick="scrapeOne(${s.id})" title="Scrape this URL">
+            <i class="fas fa-download"></i>
+          </button>
+          ${s.content ? `<button class="btn btn-ghost btn-xs" onclick="previewContent(${s.id})" title="Preview content">
+            <i class="fas fa-eye"></i>
+          </button>` : ''}
+          <button class="btn btn-ghost btn-xs" style="color:#e53e3e;" onclick="deleteSource(${s.id})" title="Remove">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>`).join('');
+  }
+
+  async function addURL() {
+    const url = document.getElementById('newUrl').value.trim();
+    if (!url) { showAlert('Please enter a URL.','warning'); return; }
+    if (!url.startsWith('http')) { showAlert('URL must start with http:// or https://','warning'); return; }
+    try {
+      await apiFetch('/admin/knowledge', {method:'POST', body: JSON.stringify({url})});
+      document.getElementById('newUrl').value = '';
+      showAlert('URL added! Click "Scrape" to fetch its content.');
+      await loadKB();
+    } catch(e) { showAlert(e.message,'error'); }
+  }
+
+  async function scrapeOne(id) {
+    const src = kbSources.find(s=>s.id===id);
+    if (!src) return;
+    showAlert(`Scraping ${src.url}…`, 'info');
+    try {
+      const d = await apiFetch(`/admin/knowledge/${id}/scrape`, {method:'POST'});
+      showAlert(`✓ Scraped "${esc(d.title)}" — ${d.chars.toLocaleString()} characters`);
+      await loadKB();
+    } catch(e) { showAlert('Scrape failed: ' + e.message, 'error'); }
+  }
+
+  async function scrapeAll() {
+    const btns = document.querySelectorAll('#scrapeAllBtn, #scrapeAllBtn2');
+    btns.forEach(b => { b.disabled=true; b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Scraping…'; });
+    try {
+      const d = await apiFetch('/admin/knowledge/scrape-all', {method:'POST'});
+      const results = d.results || [];
+      const ok = results.filter(r=>r.status==='ok').length;
+      const fail = results.filter(r=>r.status==='error').length;
+      showAlert(`Scraping complete: ${ok} succeeded${fail?', '+fail+' failed':''}.`, ok>0?'success':'error');
+      await loadKB();
+    } catch(e) { showAlert('Scrape all failed: ' + e.message, 'error'); }
+    finally {
+      btns.forEach(b => { b.disabled=false; b.innerHTML='<i class="fas fa-spider"></i> Scrape All'; });
+      document.getElementById('scrapeAllBtn2').innerHTML='<i class="fas fa-spider"></i> Scrape All Now';
+    }
+  }
+
+  function previewContent(id) {
+    const src = kbSources.find(s=>s.id===id);
+    if (!src || !src.content) return;
+    document.getElementById('contentPreviewTitle').textContent = src.title || src.url;
+    document.getElementById('contentPreviewText').textContent = src.content;
+    const el = document.getElementById('contentPreview');
+    el.style.display = 'block';
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  async function deleteSource(id) {
+    if (!confirm('Remove this knowledge source? This cannot be undone.')) return;
+    try {
+      await apiFetch(`/admin/knowledge/${id}`, {method:'DELETE'});
+      showAlert('Source removed.');
+      await loadKB();
+    } catch(e) { showAlert(e.message,'error'); }
+  }
+
+  loadKB();
+</script>
+</body>
+</html>

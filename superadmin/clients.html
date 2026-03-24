@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Clients — Techmatic AI Platform</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../admin/admin.css">
+  <style>
+    .client-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .client-status.active {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .client-status.inactive {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .embed-code {
+      background: #1a1a2e;
+      color: #0f0;
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      position: relative;
+      margin-top: 8px;
+    }
+
+    .embed-code .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: background 0.2s;
+    }
+
+    .embed-code .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px 32px;
+      width: 560px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      animation: modalIn 0.25s ease;
+    }
+
+    @keyframes modalIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95)
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1)
+      }
+    }
+
+    .modal-box h3 {
+      margin-bottom: 18px;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .api-key-box {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: monospace;
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .info-row:last-child {
+      border: none;
+    }
+
+    .info-label {
+      font-size: 13px;
+      color: #6c757d;
+    }
+
+    .info-value {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .success-box {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+
+    .success-box h4 {
+      color: #155724;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .success-box p {
+      font-size: 13px;
+      color: #155724;
+      margin: 4px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div>
+          <img src="https://www.techmaticsys.com/wp-content/uploads/2024/09/logo.png" alt="Techmatic"
+            onerror="this.style.display='none'" style="height:28px;margin-bottom:4px;">
+          <div class="logo-text">Techmatic AI</div>
+          <div class="logo-tag">Super Admin</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Platform</div>
+        <a href="dashboard.html" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
+        <a href="clients.html" class="nav-item active"><i class="fas fa-building"></i> Clients</a>
+        <div class="nav-section-label" style="margin-top:8px;">Account</div>
+        <a href="#" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-user-avatar" style="background:linear-gradient(135deg,#dc3545,#212529);"><i
+              class="fas fa-crown" style="color:#ffd700;font-size:13px;"></i></div>
+          <div>
+            <div class="sidebar-user-name" id="adminIdDisplay">Super Admin</div>
+            <div class="sidebar-user-role">Techmatic AI Platform</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Client Management</div>
+        <div class="topbar-actions">
+          <button class="topbar-btn" onclick="loadClients()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          <button class="btn btn-primary" onclick="showCreateModal()"><i class="fas fa-plus"></i> Create Client</button>
+        </div>
+      </div>
+
+      <div class="page-body">
+        <!-- Clients Table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fas fa-building"></i> All Clients</div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Client Name</th>
+                  <th>Slug</th>
+                  <th>Domain</th>
+                  <th>Status</th>
+                  <th>Leads</th>
+                  <th>Messages</th>
+                  <th>Sessions</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="clientsBody">
+                <tr>
+                  <td colspan="8" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i> Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Client Modal -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal-box">
+      <h3><i class="fas fa-plus-circle" style="color:#dc3545;"></i> Create New Client</h3>
+      <div id="createAlert" style="display:none;"></div>
+
+      <div class="form-group">
+        <label class="form-label">Client Name *</label>
+        <input type="text" id="cName" class="form-control" placeholder="e.g. Acme Corporation">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Client Slug * <span style="font-size:11px;color:#999;">(unique identifier, no
+            spaces)</span></label>
+        <input type="text" id="cSlug" class="form-control" placeholder="e.g. acme-corp">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Website Domain <span style="font-size:11px;color:#999;">(optional)</span></label>
+        <input type="text" id="cDomain" class="form-control" placeholder="e.g. acmecorp.com">
+      </div>
+      <div style="border-top:1px solid #eee;margin:16px 0;padding-top:16px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:#333;"><i class="fas fa-user-shield"
+            style="color:#dc3545;margin-right:6px;"></i>Client Admin Credentials</div>
+        <div class="form-group">
+          <label class="form-label">Admin ID *</label>
+          <input type="text" id="cAdminId" class="form-control" placeholder="e.g. acme_admin">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password *</label>
+          <input type="text" id="cAdminPw" class="form-control" placeholder="Set initial password">
+        </div>
+      </div>
+
+      <div id="createSuccess" style="display:none;"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;" id="createBtns">
+        <button class="btn btn-ghost" onclick="closeCreateModal()">Cancel</button>
+        <button class="btn btn-primary" id="createBtn" onclick="createClient()"><i class="fas fa-plus"></i> Create
+          Client</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Client Modal -->
+  <div class="modal-overlay" id="viewModal">
+    <div class="modal-box" id="viewModalBody">
+    </div>
+  </div>
+
+  <!-- AI Config Modal -->
+  <div class="modal-overlay" id="aiConfigModal">
+    <div class="modal-box">
+      <h3 id="aiConfigTitle"><i class="fas fa-robot" style="color:#dc3545;"></i> AI Configuration</h3>
+      <div id="aiAlert" style="display:none;"></div>
+
+      <input type="hidden" id="aiClientId">
+
+      <div class="form-group">
+        <label class="form-label">Claude API Key</label>
+        <div id="aiKeyMaskedArea" style="display:none;margin-bottom:8px;">
+          <code id="aiKeyMasked" class="api-key-box"></code>
+        </div>
+        <input type="password" id="aiApiKey" class="form-control" placeholder="sk-ant-api03-...">
+        <div class="form-hint">Leave blank to keep existing key.</div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button class="btn btn-ghost"
+          onclick="document.getElementById('aiConfigModal').classList.remove('show')">Cancel</button>
+        <button class="btn btn-outline" id="testAiBtn" onclick="testAiConn()">
+          <i class="fas fa-plug"></i> Test Connection
+        </button>
+        <button class="btn btn-primary" id="saveAiBtn" onclick="saveAiConfig()"><i class="fas fa-save"></i> Save AI
+          Settings</button>
+      </div>
+      <div id="aiTestResult" style="margin-top:12px;display:none;"></div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.TECHMATIC_ADMIN_API || 'http://localhost:8000';
+
+    function getToken() { return localStorage.getItem('ts_admin_token'); }
+    function getRole() { return localStorage.getItem('ts_admin_role'); }
+
+    if (!getToken() || getRole() !== 'superadmin') {
+      localStorage.clear();
+      window.location.href = '../admin/login.html';
+    }
+
+    async function apiFetch(path, options = {}) {
+      const headers = { 'Content-Type': 'application/json', 'X-Admin-Token': getToken(), ...options.headers };
+      const resp = await fetch(API + path, { ...options, headers });
+      if (resp.status === 401 || resp.status === 403) { localStorage.clear(); window.location.href = '../admin/login.html'; throw new Error('Unauthorized'); }
+      if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.detail || `HTTP ${resp.status}`); }
+      return resp.json();
+    }
+
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return iso; }
+    }
+    function esc(str) { var el = document.createElement('div'); el.textContent = str || ''; return el.innerHTML; }
+
+    async function loadClients() {
+      try {
+        const d = await apiFetch('/superadmin/clients');
+        const clients = d.clients || [];
+        const tbody = document.getElementById('clientsBody');
+        if (!clients.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="empty-state" style="padding:30px;"><i class="fas fa-inbox" style="display:block;font-size:28px;margin-bottom:8px;opacity:0.2;"></i>No clients yet. Click "Create Client" to get started.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = clients.map(c => `
+        <tr>
+          <td><div class="fw-600" style="font-size:13px;">${esc(c.client_name)}</div></td>
+          <td><code style="font-size:12px;color:#6c757d;">${esc(c.client_slug)}</code></td>
+          <td style="font-size:12px;">${esc(c.domain || '—')}</td>
+          <td><span class="client-status ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? '● Active' : '○ Inactive'}</span></td>
+          <td>${c.lead_count || 0}</td>
+          <td>${c.message_count || 0}</td>
+          <td>${c.session_count || 0}</td>
+          <td>
+            <button class="btn btn-ghost btn-sm" onclick="viewClient(${c.id})" title="View details"><i class="fas fa-eye"></i></button>
+            <button class="btn btn-ghost btn-sm" onclick="showAiConfig(${c.id})" title="AI Settings"><i class="fas fa-robot"></i></button>
+            <button class="btn btn-ghost btn-sm" onclick="getEmbed(${c.id})" title="Get embed code"><i class="fas fa-code"></i></button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleActive(${c.id}, ${c.is_active ? 0 : 1})" title="${c.is_active ? 'Deactivate' : 'Activate'}">
+              <i class="fas fa-${c.is_active ? 'pause' : 'play'}" style="color:${c.is_active ? '#dc3545' : '#28a745'}"></i>
+            </button>
+          </td>
+        </tr>`).join('');
+      } catch (e) {
+        document.getElementById('clientsBody').innerHTML = `<tr><td colspan="8" class="text-muted" style="padding:16px;">Error: ${esc(e.message)}</td></tr>`;
+      }
+    }
+
+    /* ── Create Client ── */
+    function showCreateModal() {
+      document.getElementById('createModal').classList.add('show');
+      document.getElementById('createSuccess').style.display = 'none';
+      document.getElementById('createBtns').style.display = 'flex';
+      document.getElementById('createAlert').style.display = 'none';
+      ['cName', 'cSlug', 'cDomain', 'cAdminId', 'cAdminPw'].forEach(id => document.getElementById(id).value = '');
+    }
+    function closeCreateModal() { document.getElementById('createModal').classList.remove('show'); }
+
+    // Auto-generate slug from name
+    document.getElementById('cName').addEventListener('input', function () {
+      var slug = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      document.getElementById('cSlug').value = slug;
+      document.getElementById('cAdminId').value = slug ? slug + '_admin' : '';
+    });
+
+    async function createClient() {
+      const name = document.getElementById('cName').value.trim();
+      const slug = document.getElementById('cSlug').value.trim();
+      const domain = document.getElementById('cDomain').value.trim();
+      const adminId = document.getElementById('cAdminId').value.trim();
+      const adminPw = document.getElementById('cAdminPw').value.trim();
+
+      if (!name || !slug || !adminId || !adminPw) {
+        var alert = document.getElementById('createAlert');
+        alert.style.display = 'flex'; alert.className = 'alert alert-error';
+        alert.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>Please fill in all required fields.</span>';
+        return;
+      }
+
+      document.getElementById('createBtn').disabled = true;
+      document.getElementById('createBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+
+      try {
+        const d = await apiFetch('/superadmin/clients', {
+          method: 'POST',
+          body: JSON.stringify({ client_name: name, client_slug: slug, domain: domain || null, admin_id: adminId, admin_password: adminPw })
+        });
+
+        document.getElementById('createBtns').style.display = 'none';
+        document.getElementById('createAlert').style.display = 'none';
+        var successEl = document.getElementById('createSuccess');
+        successEl.style.display = 'block';
+        successEl.innerHTML = `
+        <div class="success-box">
+          <h4><i class="fas fa-check-circle"></i> Client Created Successfully!</h4>
+          <p><strong>Client:</strong> ${esc(name)}</p>
+          <p><strong>Admin Login:</strong> ${esc(adminId)}</p>
+          <p><strong>Password:</strong> ${esc(adminPw)}</p>
+          <p style="margin-top:10px;"><strong>Widget API Key:</strong></p>
+          <div class="api-key-box">${esc(d.widget_api_key)}</div>
+          <p style="margin-top:8px;font-size:12px;color:#6c757d;">Save these credentials — the password cannot be retrieved later.</p>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+          <button class="btn btn-ghost" onclick="closeCreateModal()">Close</button>
+          <button class="btn btn-primary" onclick="getEmbed(${d.client_id})"><i class="fas fa-code"></i> Get Embed Code</button>
+        </div>`;
+
+        loadClients();
+      } catch (e) {
+        var alert = document.getElementById('createAlert');
+        alert.style.display = 'flex'; alert.className = 'alert alert-error';
+        alert.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>' + esc(e.message) + '</span>';
+      } finally {
+        document.getElementById('createBtn').disabled = false;
+        document.getElementById('createBtn').innerHTML = '<i class="fas fa-plus"></i> Create Client';
+      }
+    }
+
+    /* ── View Client ── */
+    async function viewClient(clientId) {
+      try {
+        const d = await apiFetch('/superadmin/clients/' + clientId);
+        const c = d.client;
+        const admins = d.admins || [];
+        var body = document.getElementById('viewModalBody');
+        body.innerHTML = `
+        <h3><i class="fas fa-building" style="color:#dc3545;"></i> ${esc(c.client_name)}</h3>
+        <div class="info-row"><span class="info-label">Client ID</span><span class="info-value">${c.id}</span></div>
+        <div class="info-row"><span class="info-label">Slug</span><span class="info-value">${esc(c.client_slug)}</span></div>
+        <div class="info-row"><span class="info-label">Domain</span><span class="info-value">${esc(c.domain || '—')}</span></div>
+        <div class="info-row"><span class="info-label">Status</span><span class="info-value"><span class="client-status ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? '● Active' : '○ Inactive'}</span></span></div>
+        <div class="info-row"><span class="info-label">Widget API Key</span><span class="info-value" style="max-width:250px;overflow:hidden;text-overflow:ellipsis;">${esc(c.widget_api_key)}</span></div>
+        <div class="info-row"><span class="info-label">Created</span><span class="info-value">${fmtTime(c.created_at)}</span></div>
+
+        <div style="margin-top:16px;border-top:1px solid #eee;padding-top:16px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px;"><i class="fas fa-user-shield" style="color:#dc3545;margin-right:6px;"></i>Admin Users</div>
+          ${admins.length ? admins.map(a => `<div class="info-row"><span class="info-label">${esc(a.admin_id)}</span><span class="info-value" style="font-size:12px;color:#6c757d;">Created ${fmtTime(a.created_at)}</span></div>`).join('') : '<div class="text-muted" style="font-size:13px;">No admin users.</div>'}
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+          <button class="btn btn-ghost" onclick="document.getElementById('viewModal').classList.remove('show')">Close</button>
+          <button class="btn btn-primary" onclick="getEmbed(${c.id})"><i class="fas fa-code"></i> Embed Code</button>
+        </div>`;
+
+        document.getElementById('viewModal').classList.add('show');
+      } catch (e) {
+        alert('Error loading client: ' + e.message);
+      }
+    }
+
+    /* ── AI Config ── */
+    async function showAiConfig(clientId) {
+      try {
+        const d = await apiFetch('/superadmin/clients/' + clientId);
+        document.getElementById('aiClientId').value = clientId;
+        document.getElementById('aiConfigTitle').innerHTML = `<i class="fas fa-robot" style="color:#dc3545;"></i> AI Config: ${esc(d.client.client_name)}`;
+        document.getElementById('aiApiKey').value = '';
+        document.getElementById('aiTestResult').style.display = 'none';
+
+        const maskedArea = document.getElementById('aiKeyMaskedArea');
+        if (d.config.api_key_masked) {
+          maskedArea.style.display = 'block';
+          document.getElementById('aiKeyMasked').textContent = d.config.api_key_masked;
+        } else {
+          maskedArea.style.display = 'none';
+        }
+
+        document.getElementById('aiConfigModal').classList.add('show');
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function testAiConn() {
+      const clientId = document.getElementById('aiClientId').value;
+      const btn = document.getElementById('testAiBtn');
+      const resultEl = document.getElementById('aiTestResult');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+      resultEl.style.display = 'none';
+
+      try {
+        const d = await apiFetch(`/superadmin/clients/${clientId}/test-ai`, { method: 'POST' });
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<div class="alert alert-success" style="font-size:12px;padding:8px 12px;"><i class="fas fa-check-circle"></i> Connected! Model: ${esc(d.model)}</div>`;
+      } catch (e) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<div class="alert alert-error" style="font-size:12px;padding:8px 12px;"><i class="fas fa-times-circle"></i> ${esc(e.message)}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plug"></i> Test Connection';
+      }
+    }
+
+    async function saveAiConfig() {
+      const clientId = document.getElementById('aiClientId').value;
+      const btn = document.getElementById('saveAiBtn');
+      const apiKey = document.getElementById('aiApiKey').value.trim();
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+      try {
+        const payload = {};
+        if (apiKey) payload.api_key = apiKey;
+
+        await apiFetch('/superadmin/clients/' + clientId + '/ai-config', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        document.getElementById('aiConfigModal').classList.remove('show');
+        alert('AI configuration saved successfully!');
+      } catch (e) { alert('Error: ' + e.message); }
+      finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Save AI Settings';
+      }
+    }
+
+    /* ── Get Embed Code ── */
+    async function getEmbed(clientId) {
+      try {
+        const d = await apiFetch('/superadmin/clients/' + clientId + '/embed-code');
+        var body = document.getElementById('viewModalBody');
+        body.innerHTML = `
+        <h3><i class="fas fa-code" style="color:#dc3545;"></i> Embed Code</h3>
+        <p style="font-size:13px;color:#6c757d;margin-bottom:12px;">
+          Paste this code before the closing <code>&lt;/body&gt;</code> tag on the client's website.
+          The chatbot widget will automatically appear in the bottom-right corner.
+        </p>
+        <div class="embed-code" id="embedCodeBlock">
+          <button class="copy-btn" onclick="copyEmbed()"><i class="fas fa-copy"></i> Copy</button>
+          ${esc(d.embed_code)}
+        </div>
+        <div style="margin-top:12px;">
+          <div style="font-size:12px;color:#6c757d;"><strong>API Key:</strong></div>
+          <div class="api-key-box" style="margin-top:4px;">${esc(d.api_key)}</div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+          <button class="btn btn-ghost" onclick="document.getElementById('viewModal').classList.remove('show')">Close</button>
+        </div>`;
+        document.getElementById('viewModal').classList.add('show');
+      } catch (e) {
+        alert('Error getting embed code: ' + e.message);
+      }
+    }
+
+    function copyEmbed() {
+      var el = document.getElementById('embedCodeBlock');
+      var text = el.textContent.replace('Copy', '').trim();
+      navigator.clipboard.writeText(text).then(function () {
+        var btn = el.querySelector('.copy-btn');
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(function () { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+      });
+    }
+
+    /* ── Toggle Active ── */
+    async function toggleActive(clientId, newState) {
+      if (!confirm(newState ? 'Activate this client?' : 'Deactivate this client? Their chatbot will stop working.')) return;
+      try {
+        await apiFetch('/superadmin/clients/' + clientId, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_active: !!newState })
+        });
+        loadClients();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(function (m) {
+      m.addEventListener('click', function (e) {
+        if (e.target === m) m.classList.remove('show');
+      });
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      localStorage.clear();
+      window.location.href = '../admin/login.html';
+    });
+
+    document.getElementById('adminIdDisplay').textContent = localStorage.getItem('ts_admin_id') || 'Super Admin';
+
+    loadClients();
+  </script>
+</body>
+
+</html>
