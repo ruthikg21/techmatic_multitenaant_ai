@@ -340,7 +340,7 @@ async def test_ai(request: Request):
         import anthropic
         client = anthropic.Anthropic(api_key=config['api_key'])
         resp = client.messages.create(
-            model=config.get('model_name') or 'claude-sonnet-4-5-20250514',
+            model=config.get('model_name') or 'claude-haiku-4-5-20251001',
             max_tokens=50,
             messages=[{"role": "user", "content": "Reply with exactly: AI Connected!"}]
         )
@@ -473,7 +473,7 @@ async def test_client_ai(client_id: int, request: Request):
         import anthropic
         client = anthropic.Anthropic(api_key=config['api_key'])
         # Use existing model or default to sonnet
-        model = config.get('model_name') or 'claude-sonnet-4-5-20250514'
+        model = config.get('model_name') or 'claude-haiku-4-5-20251001'
         resp = client.messages.create(
             model=model,
             max_tokens=50,
