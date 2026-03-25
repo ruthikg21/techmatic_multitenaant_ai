@@ -180,6 +180,33 @@ Always be professional, helpful, and concise. Ask one qualification question at 
             ]:
                 c.execute("INSERT INTO knowledge_sources (client_id, url, status, active) VALUES (?,?,?,1)", (client_id, url, 'pending'))
 
+    # ── Seed Cravingly client ────────────────────────────────────────────────
+    c.execute("SELECT id FROM clients WHERE client_slug='cravingly'")
+    if not c.fetchone():
+        now2 = datetime.utcnow().isoformat()
+        crav_key = generate_api_key()
+        c.execute("""INSERT INTO clients (client_name, client_slug, widget_api_key, domain, is_active, created_at, updated_at)
+                     VALUES (?,?,?,?,1,?,?)""",
+                  ('Cravingly', 'cravingly', crav_key, 'cravingly.in', now2, now2))
+        crav_id = c.lastrowid
+
+        c.execute("SELECT id FROM admin_users WHERE admin_id='cravingly_admin'")
+        if not c.fetchone():
+            c.execute("INSERT INTO admin_users (admin_id, password_hash, role, client_id, created_at) VALUES (?,?,?,?,?)",
+                      ('cravingly_admin', hash_password('cravingly123'), 'client', crav_id, now2))
+
+        c.execute("SELECT id FROM ai_config WHERE client_id=?", (crav_id,))
+        if not c.fetchone():
+            c.execute("""INSERT INTO ai_config (client_id, model_name, system_prompt, lead_questions_enabled,
+                        qualification_questions, assistant_name, greeting, widget_color, updated_at)
+                        VALUES (?,?,?,1,?,?,?,?,?)""",
+                      (crav_id, 'claude-4-6-sonnet-20260215',
+                       'You are an AI assistant for Cravingly. Be professional, helpful, and concise.',
+                       "What service are you interested in?\nWhat industry are you in?",
+                       'Cravingly AI',
+                       "👋 Hello! I'm the Cravingly AI Assistant. How can I help you today?",
+                       '#933a43', now2))
+
     conn.commit()
     conn.close()
     print("✅ DB ready (multi-tenant).")
