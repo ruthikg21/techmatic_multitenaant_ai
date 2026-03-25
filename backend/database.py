@@ -98,15 +98,14 @@ def init_db():
         FOREIGN KEY (client_id) REFERENCES clients(id)
     )""")
 
-    # ── WhatsApp config (per client — Meta Cloud API) ─────────────────────────
+    # ── WhatsApp config (per client — Twilio) ─────────────────────────────────
     c.execute("""CREATE TABLE IF NOT EXISTS whatsapp_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         client_id INTEGER NOT NULL UNIQUE,
         enabled INTEGER DEFAULT 0,
-        meta_phone_number_id TEXT,
-        meta_access_token TEXT,
-        meta_verify_token TEXT,
-        meta_waba_id TEXT,
+        twilio_account_sid TEXT,
+        twilio_auth_token TEXT,
+        twilio_whatsapp_number TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (client_id) REFERENCES clients(id)
@@ -506,24 +505,15 @@ def save_whatsapp_config(client_id, **kwargs):
     conn.commit()
     conn.close()
 
-def get_whatsapp_config_by_phone_number_id(phone_number_id):
-    """Look up WhatsApp config by Meta Phone Number ID (for incoming webhook)."""
+def get_whatsapp_config_by_number(whatsapp_number):
+    """Look up WhatsApp config by Twilio WhatsApp number (for incoming webhook)."""
     conn = get_conn()
     row = conn.execute(
-        "SELECT wc.*, c.is_active as client_active FROM whatsapp_config wc JOIN clients c ON c.id=wc.client_id WHERE wc.meta_phone_number_id=? AND wc.enabled=1",
-        (phone_number_id,)
+        "SELECT wc.*, c.is_active as client_active FROM whatsapp_config wc JOIN clients c ON c.id=wc.client_id WHERE wc.twilio_whatsapp_number=? AND wc.enabled=1",
+        (whatsapp_number,)
     ).fetchone()
     conn.close()
     return dict(row) if row else None
-
-def get_all_whatsapp_configs_enabled():
-    """Get all enabled WhatsApp configs (for webhook routing)."""
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT wc.*, c.is_active as client_active FROM whatsapp_config wc JOIN clients c ON c.id=wc.client_id WHERE wc.enabled=1"
-    ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
 
 def get_whatsapp_sessions(client_id):
     """Get all WhatsApp sessions for a client."""
