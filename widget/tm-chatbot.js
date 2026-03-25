@@ -66,20 +66,23 @@
     '}',
     '#tm-fab {',
     '  position: fixed; bottom: 20px; right: 20px;',
-    '  width: 58px; height: 58px; border-radius: 50%;',
+    '  height: 48px; border-radius: 24px; padding: 0 20px;',
     '  background: linear-gradient(135deg, #dc3545 0%, #212529 100%);',
     '  border: none; cursor: pointer; z-index: 99990;',
-    '  display: flex !important; align-items: center; justify-content: center;',
+    '  display: flex !important; align-items: center; justify-content: center; gap: 8px;',
     '  box-shadow: 0 6px 20px rgba(220,53,69,0.50), 0 2px 8px rgba(0,0,0,0.20);',
     '  transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease;',
-    '  outline: none;',
+    '  outline: none; white-space: nowrap;',
     '}',
-    '#tm-fab:hover { transform: scale(1.12); box-shadow: 0 10px 30px rgba(220,53,69,0.60), 0 4px 12px rgba(0,0,0,0.25); }',
-    '#tm-fab svg { width: 26px; height: 26px; fill: #fff; position: absolute; transition: transform .3s ease, opacity .25s ease; }',
+    '#tm-fab:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(220,53,69,0.60), 0 4px 12px rgba(0,0,0,0.25); }',
+    '#tm-fab svg { width: 22px; height: 22px; fill: #fff; flex-shrink: 0; transition: transform .3s ease, opacity .25s ease; }',
+    '#tm-fab .tm-fab-text { color: #fff; font-size: 14px; font-weight: 600; letter-spacing: 0.2px; }',
     '#tm-fab .ic-chat  { opacity:1; transform:scale(1) rotate(0deg); }',
-    '#tm-fab .ic-close { opacity:0; transform:scale(.6) rotate(-90deg); }',
-    '#tm-fab.open .ic-chat  { opacity:0; transform:scale(.6) rotate(90deg); }',
-    '#tm-fab.open .ic-close { opacity:1; transform:scale(1) rotate(0deg); }',
+    '#tm-fab .ic-close { opacity:0; transform:scale(.6) rotate(-90deg); position: absolute; }',
+    '#tm-fab.open .ic-chat  { opacity:0; transform:scale(.6) rotate(90deg); position: absolute; }',
+    '#tm-fab.open .ic-close { opacity:1; transform:scale(1) rotate(0deg); position: relative; }',
+    '#tm-fab.open .tm-fab-text { display: none; }',
+    '#tm-fab.open { width: 48px; height: 48px; border-radius: 50%; padding: 0; justify-content: center; }',
     '#tm-badge {',
     '  position: absolute; top: -3px; right: -3px;',
     '  width: 20px; height: 20px; background: #fff; color: #dc3545;',
@@ -187,6 +190,7 @@
     el.innerHTML =
       '<button id="tm-fab" title="Chat with us">' +
       '<svg class="ic-chat" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' +
+      '<span class="tm-fab-text">Hi there, need help?</span>' +
       '<svg class="ic-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>' +
       '<span id="tm-badge">1</span>' +
       '</button>' +
