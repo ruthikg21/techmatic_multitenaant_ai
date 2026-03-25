@@ -3,7 +3,7 @@
  * All admin pages load this file.
  */
 
-const API = window.TECHMATIC_ADMIN_API || 'http://localhost:8000';
+const API = window.TECHMATIC_ADMIN_API || 'https://techmatic-multitenaant-ai.onrender.com';
 
 /* ── Token storage ── */
 function getToken() { return localStorage.getItem('ts_admin_token'); }
