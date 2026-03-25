@@ -98,6 +98,37 @@ def init_db():
         FOREIGN KEY (client_id) REFERENCES clients(id)
     )""")
 
+    # ── Projects / Installations (per client) ─────────────────────────────────
+    c.execute("""CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER NOT NULL,
+        project_title TEXT,
+        sales_rep TEXT,
+        scheduled_date TEXT,
+        company_name TEXT,
+        company_address TEXT,
+        company_gstin TEXT,
+        site_contact_person TEXT,
+        site_contact_number TEXT,
+        models_to_transport TEXT,
+        transportation_terms TEXT DEFAULT 'Paid',
+        invoice_value TEXT,
+        amount_in_words TEXT,
+        products_json TEXT,
+        total_qty REAL DEFAULT 0,
+        total_weight REAL DEFAULT 0,
+        ext_rod_length TEXT,
+        field_height TEXT,
+        required_electrical_wire TEXT,
+        mounting_structure TEXT,
+        crane_rafter_distance TEXT,
+        other_info TEXT,
+        status TEXT DEFAULT 'draft',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (client_id) REFERENCES clients(id)
+    )""")
+
     # ── WhatsApp config (per client — Meta Cloud API) ─────────────────────────
     c.execute("""CREATE TABLE IF NOT EXISTS whatsapp_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -537,3 +568,50 @@ def get_whatsapp_sessions(client_id):
     """, (client_id,)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PROJECTS / INSTALLATIONS (scoped by client_id)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def get_all_projects(client_id, limit=100):
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM projects WHERE client_id=? ORDER BY created_at DESC LIMIT ?", (client_id, limit)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_project(project_id, client_id):
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM projects WHERE id=? AND client_id=?", (project_id, client_id)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def save_project(client_id, **kwargs):
+    conn = get_conn()
+    now = datetime.utcnow().isoformat()
+    kwargs['client_id'] = client_id
+    kwargs['created_at'] = now
+    kwargs['updated_at'] = now
+    cols = ", ".join(kwargs.keys())
+    ph = ", ".join("?" * len(kwargs))
+    c = conn.cursor()
+    c.execute(f"INSERT INTO projects ({cols}) VALUES ({ph})", list(kwargs.values()))
+    project_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return project_id
+
+def update_project(project_id, client_id, **kwargs):
+    conn = get_conn()
+    kwargs['updated_at'] = datetime.utcnow().isoformat()
+    cols = ", ".join(f"{k}=?" for k in kwargs)
+    conn.execute(f"UPDATE projects SET {cols} WHERE id=? AND client_id=?",
+                 list(kwargs.values()) + [project_id, client_id])
+    conn.commit()
+    conn.close()
+
+def delete_project(project_id, client_id):
+    conn = get_conn()
+    conn.execute("DELETE FROM projects WHERE id=? AND client_id=?", (project_id, client_id))
+    conn.commit()
+    conn.close()

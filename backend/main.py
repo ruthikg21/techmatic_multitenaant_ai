@@ -17,7 +17,9 @@ from database import (
     toggle_client_active, regenerate_client_api_key,
     # WhatsApp
     get_whatsapp_config, save_whatsapp_config, get_whatsapp_config_by_phone_number_id,
-    get_whatsapp_sessions, get_all_whatsapp_configs_enabled
+    get_whatsapp_sessions, get_all_whatsapp_configs_enabled,
+    # Projects
+    get_all_projects, get_project, save_project, update_project, delete_project
 )
 from ai_engine import handle_incoming_message
 from scraper import scrape_url
@@ -819,6 +821,96 @@ async def wa_send_message(req: WhatsAppSendReq, request: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send: {str(e)}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ADMIN — PROJECTS / INSTALLATIONS (scoped to client)
+# ══════════════════════════════════════════════════════════════════════════════
+
+import json as json_stdlib
+
+class ProjectReq(BaseModel):
+    project_title: Optional[str] = None
+    sales_rep: Optional[str] = None
+    scheduled_date: Optional[str] = None
+    company_name: Optional[str] = None
+    company_address: Optional[str] = None
+    company_gstin: Optional[str] = None
+    site_contact_person: Optional[str] = None
+    site_contact_number: Optional[str] = None
+    models_to_transport: Optional[str] = None
+    transportation_terms: Optional[str] = None
+    invoice_value: Optional[str] = None
+    amount_in_words: Optional[str] = None
+    products: Optional[list] = None
+    total_qty: Optional[float] = None
+    total_weight: Optional[float] = None
+    ext_rod_length: Optional[str] = None
+    field_height: Optional[str] = None
+    required_electrical_wire: Optional[str] = None
+    mounting_structure: Optional[str] = None
+    crane_rafter_distance: Optional[str] = None
+    other_info: Optional[str] = None
+    status: Optional[str] = None
+
+@app.get("/admin/projects")
+async def list_projects(request: Request):
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    return {"projects": get_all_projects(cid)}
+
+@app.get("/admin/projects/{project_id}")
+async def get_project_route(project_id: int, request: Request):
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    p = get_project(project_id, cid)
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if p.get("products_json"):
+        try:
+            p["products"] = json_stdlib.loads(p["products_json"])
+        except:
+            p["products"] = []
+    else:
+        p["products"] = []
+    return p
+
+@app.post("/admin/projects")
+async def create_project(req: ProjectReq, request: Request):
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    data = req.dict(exclude_none=True)
+    if "products" in data:
+        data["products_json"] = json_stdlib.dumps(data.pop("products"))
+    pid = save_project(cid, **data)
+    return {"status": "ok", "project_id": pid}
+
+@app.put("/admin/projects/{project_id}")
+async def update_project_route(project_id: int, req: ProjectReq, request: Request):
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    data = req.dict(exclude_none=True)
+    if "products" in data:
+        data["products_json"] = json_stdlib.dumps(data.pop("products"))
+    update_project(project_id, cid, **data)
+    return {"status": "ok"}
+
+@app.delete("/admin/projects/{project_id}")
+async def delete_project_route(project_id: int, request: Request):
+    admin = get_admin(request)
+    cid = admin["client_id"]
+    if not cid:
+        raise HTTPException(status_code=400, detail="No client context")
+    delete_project(project_id, cid)
+    return {"status": "ok"}
 
 
 @app.get("/")
