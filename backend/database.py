@@ -55,7 +55,7 @@ def init_db():
             id SERIAL PRIMARY KEY,
             client_id INTEGER NOT NULL,
             api_key TEXT,
-            model_name TEXT DEFAULT 'claude-4-6-sonnet-20260215',
+            model_name TEXT DEFAULT 'claude-sonnet-4-5-20250514',
             system_prompt TEXT,
             lead_questions_enabled INTEGER DEFAULT 1,
             qualification_questions TEXT,
@@ -114,6 +114,10 @@ def init_db():
             updated_at TEXT NOT NULL,
             FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
         )""")
+
+        # Migration: fix old model names
+        c.execute("UPDATE ai_config SET model_name=%s WHERE model_name IN (%s, %s, %s)",
+                  ('claude-sonnet-4-5-20250514', 'claude-3-5-sonnet-20240620', 'claude-3-haiku-20240307', 'claude-4-6-sonnet-20260215'))
 
         # Migration: add Twilio columns if table exists with old schema
         try:
@@ -175,7 +179,7 @@ Always be professional, helpful, and concise. Ask one qualification question at 
 
                 c.execute("""INSERT INTO ai_config (client_id, model_name, system_prompt, lead_questions_enabled, qualification_questions,
                             assistant_name, greeting, widget_color, updated_at) VALUES (%s,%s,%s,1,%s,%s,%s,%s,%s)""",
-                          (client_id, 'claude-4-6-sonnet-20260215', default_prompt, default_questions,
+                          (client_id, 'claude-sonnet-4-5-20250514', default_prompt, default_questions,
                            'Techmatic AI Assistant',
                            "Hello! I'm the Techmatic AI Assistant. Ask me anything about our services, or let me help you find the right solution!",
                            '#933a43', now))
@@ -200,7 +204,7 @@ Always be professional, helpful, and concise. Ask one qualification question at 
                 c.execute("""INSERT INTO ai_config (client_id, model_name, system_prompt, lead_questions_enabled,
                             qualification_questions, assistant_name, greeting, widget_color, updated_at)
                             VALUES (%s,%s,%s,1,%s,%s,%s,%s,%s)""",
-                          (crav_id, 'claude-4-6-sonnet-20260215',
+                          (crav_id, 'claude-sonnet-4-5-20250514',
                            'You are an AI assistant for Cravingly. Be professional, helpful, and concise.',
                            "What service are you interested in?\nWhat industry are you in?",
                            'Cravingly AI',
@@ -273,7 +277,7 @@ Your goals:
         c.execute("""INSERT INTO ai_config (client_id, model_name, system_prompt, lead_questions_enabled,
                     qualification_questions, assistant_name, greeting, widget_color, updated_at)
                     VALUES (%s,%s,%s,1,%s,%s,%s,%s,%s)""",
-                  (client_id, 'claude-4-6-sonnet-20260215', default_prompt, default_questions,
+                  (client_id, 'claude-sonnet-4-5-20250514', default_prompt, default_questions,
                    f'{client_name} AI',
                    f"Hello! I'm the {client_name} AI Assistant. How can I help you today?",
                    '#933a43', now))

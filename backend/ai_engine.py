@@ -179,7 +179,7 @@ async def handle_incoming_message(source, message, session_id, client_id=1):
     try:
         client = anthropic.Anthropic(api_key=config['api_key'])
         response = client.messages.create(
-            model=config.get('model_name') or 'claude-4-6-sonnet-20260215',
+            model=config.get('model_name') or 'claude-sonnet-4-5-20250514',
             max_tokens=1024,
             system=system_prompt,
             messages=messages,
