@@ -1,5 +1,5 @@
 /*!
- * Techmatic AI Chatbot — Embeddable Widget v2.0
+ * Matic AI Chatbot — Embeddable Widget v2.0
  *
  * USAGE: Add this to the client's website before </body>:
  *
@@ -22,7 +22,7 @@
   var SK = 'tm_sid';   // sessionStorage key
 
   if (!API_KEY || !SERVER) {
-    console.error('[Techmatic AI] Missing apiKey or serverUrl in TM_WIDGET_CONFIG');
+    console.error('[Matic AI] Missing apiKey or serverUrl in TM_WIDGET_CONFIG');
     return;
   }
 
@@ -58,7 +58,7 @@
 
   /* ─── inject CSS ────────────────────────────────────────────── */
   var css = [
-    '/* Techmatic AI Widget — scoped under #tm-widget */',
+    '/* Matic AI Widget — scoped under #tm-widget */',
     '#tm-widget, #tm-widget * {',
     '  box-sizing: border-box;',
     "  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;",
@@ -214,7 +214,7 @@
       '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>' +
       '</button>' +
       '</div>' +
-      '<div id="tm-pow">Powered by <b>Techmatic AI</b></div>' +
+      '<div id="tm-pow">Powered by <b>Matic AI</b></div>' +
       '</div>';
     document.body.appendChild(el);
   }

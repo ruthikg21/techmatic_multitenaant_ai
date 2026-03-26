@@ -24,7 +24,7 @@ from scraper import scrape_url
 
 from fastapi.staticfiles import StaticFiles
 
-app = FastAPI(title="Techmatic AI Platform", version="2.0.0")
+app = FastAPI(title="Matic AI Platform", version="2.0.0")
 
 # Mount static files from the root directory
 app.mount("/static", StaticFiles(directory="../"), name="static")
